@@ -22,13 +22,26 @@
 #include <QObject>
 #include <QTimer>
 #include <anisthesia.hpp>
+#include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
 #include "track/episode.hpp"
 
 namespace track::media {
+
+struct Candidate {
+  const void* handle = nullptr;
+  bool hasEpisode = false;
+  bool identified = false;
+};
+
+// Picks the window to track: the current one while it shows an identified anime, otherwise the
+// first one that does. If none does, the current or first window that shows any episode.
+std::optional<std::size_t> chooseCandidate(std::span<const Candidate> candidates,
+                                           const void* currentHandle);
 
 class Detection final : public QObject {
   Q_OBJECT
