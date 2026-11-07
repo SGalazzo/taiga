@@ -36,8 +36,8 @@ private:
   void authorizeMyAnimeList();
   void updateVisibleGroup();
 
-  bool m_myanimelistAuthorizing = false;
-  QString m_myanimelistAuthorizationError;
+  bool myanimelistAuthorizing_ = false;
+  QString myanimelistAuthorizationError_;
 };
 
 }  // namespace gui

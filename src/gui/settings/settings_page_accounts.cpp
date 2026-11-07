@@ -67,17 +67,17 @@ SettingsPageAccounts::SettingsPageAccounts(Ui::SettingsDialog* ui, QDialog* dial
   const auto* myanimelist = sync::myanimelist::Service::instance();
 
   connect(myanimelist, &sync::Service::errorOccurred, this, [this](const QString& message) {
-    if (m_myanimelistAuthorizing) m_myanimelistAuthorizationError = message;
+    if (myanimelistAuthorizing_) myanimelistAuthorizationError_ = message;
   });
 
   connect(myanimelist, &sync::Service::authenticationCompleted, this, [this](bool authenticated) {
-    if (!m_myanimelistAuthorizing) return;
-    m_myanimelistAuthorizing = false;
+    if (!myanimelistAuthorizing_) return;
+    myanimelistAuthorizing_ = false;
     ui_->myanimelistAuthorizeButton->setEnabled(true);
 
     if (!authenticated) {
       QMessageBox::warning(dialog_, tr("MyAnimeList"),
-                           tr("Authorization failed.\n\n%1").arg(m_myanimelistAuthorizationError));
+                           tr("Authorization failed.\n\n%1").arg(myanimelistAuthorizationError_));
       return;
     }
 
@@ -147,8 +147,8 @@ void SettingsPageAccounts::authorizeMyAnimeList() {
           .trimmed();
   if (!ok || code.isEmpty()) return;
 
-  m_myanimelistAuthorizing = true;
-  m_myanimelistAuthorizationError.clear();
+  myanimelistAuthorizing_ = true;
+  myanimelistAuthorizationError_.clear();
   ui_->myanimelistAuthorizeButton->setEnabled(false);
 
   sync::myanimelist::Service::instance()->requestAccessToken(
