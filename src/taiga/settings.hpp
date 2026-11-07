@@ -52,6 +52,7 @@ public:
   std::string proxyPassword() const;
   bool streamingMediaEnabled() const;
   bool syncEnabled() const;
+  bool discordEnabled() const;
   anime::TitleLanguage titleLanguage() const;
   std::chrono::seconds updateDelay() const;
   bool updateLibraryOnly() const;
@@ -72,6 +73,7 @@ public:
   void setProxyPassword(const std::string& password) const;
   void setStreamingMediaEnabled(const bool enabled) const;
   void setSyncEnabled(const bool enabled) const;
+  void setDiscordEnabled(const bool enabled) const;
   void setTitleLanguage(const anime::TitleLanguage language) const;
   void setUpdateDelay(const std::chrono::seconds delay) const;
   void setUpdateLibraryOnly(const bool enabled) const;

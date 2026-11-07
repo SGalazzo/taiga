@@ -32,6 +32,7 @@
 #include "gui/main/main_window.hpp"
 #include "gui/utils/image_provider.hpp"
 #include "gui/utils/theme.hpp"
+#include "link/discord.hpp"
 #include "media/anime_db.hpp"
 #include "media/anime_history.hpp"
 #include "sync/queue.hpp"
@@ -87,6 +88,7 @@ int Application::run() {
   sync::queue.init();
   track::media::detection()->init();
   track::updateSession()->init();
+  link::discord::presence()->init();
   gui::imageProvider.init();
 
   gui::theme.initStyle();

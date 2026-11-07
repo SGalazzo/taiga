@@ -31,6 +31,8 @@ target_sources(taiga PRIVATE
 	compat/settings.cpp
 	compat/settings.hpp
 
+	link/discord.cpp
+	link/discord.hpp
 	link/discord_ipc.cpp
 	link/discord_ipc.hpp
 

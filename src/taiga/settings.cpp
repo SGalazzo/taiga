@@ -127,6 +127,10 @@ bool Settings::syncEnabled() const {
   return value("sync.enabled", true).toBool();
 }
 
+bool Settings::discordEnabled() const {
+  return value("sharing.discord.enabled", false).toBool();
+}
+
 anime::TitleLanguage Settings::titleLanguage() const {
   if (!titleLanguageCache_) {
     const auto language = value("library.titleLanguage", u"romaji"_s).toString();
@@ -225,6 +229,10 @@ void Settings::setStreamingMediaEnabled(const bool enabled) const {
 
 void Settings::setSyncEnabled(const bool enabled) const {
   setValue("sync.enabled", enabled);
+}
+
+void Settings::setDiscordEnabled(const bool enabled) const {
+  setValue("sharing.discord.enabled", enabled);
 }
 
 void Settings::setTitleLanguage(const anime::TitleLanguage language) const {
