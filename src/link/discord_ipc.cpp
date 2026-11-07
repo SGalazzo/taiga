@@ -26,15 +26,17 @@
 #include <QUuid>
 #include <QtEndian>
 
+#include "base/log.hpp"
 #include "base/string.hpp"
 
-namespace link::discord {
+namespace discord {
 
 namespace {
 
 constexpr int kSocketCount = 10;   // Discord listens on the first free of discord-ipc-{0..9}
 constexpr int kHeaderSize = 8;     // opcode + length, both 32-bit little-endian
 constexpr int kInvalidClientId = 4000;
+constexpr qint32 kMaxFrameSize = 1024 * 1024;
 
 }  // namespace
 
@@ -44,10 +46,20 @@ IpcClient::IpcClient(const QString& clientId, QObject* parent, const QString& so
       clientId_{clientId},
       socketPrefix_{socketPrefix},
       socket_{new QLocalSocket{this}},
-      retryTimer_{new QTimer{this}} {
+      retryTimer_{new QTimer{this}},
+      handshakeTimer_{new QTimer{this}} {
   retryTimer_->setSingleShot(true);
   retryTimer_->setInterval(retryInterval);
   connect(retryTimer_, &QTimer::timeout, this, &IpcClient::connectToDiscord);
+
+  handshakeTimer_->setSingleShot(true);
+  handshakeTimer_->setInterval(retryInterval);
+  connect(handshakeTimer_, &QTimer::timeout, this, [this]() {
+    if (state_ != State::Handshaking) return;
+    qWarning() << "Discord: no response to handshake";
+    socket_->abort();
+    if (state_ != State::Disconnected) onDisconnected();
+  });
 
   connect(socket_, &QLocalSocket::connected, this, &IpcClient::onConnected);
   connect(socket_, &QLocalSocket::disconnected, this, &IpcClient::onDisconnected);
@@ -71,12 +83,10 @@ void IpcClient::setEnabled(bool enabled) {
     connectToDiscord();
   } else {
     retryTimer_->stop();
-    // Discord removes the activity when the connection is closed.
-    if (state_ == State::Handshaking || state_ == State::Ready) {
-      socket_->disconnectFromServer();
-    } else {
-      socket_->abort();
-    }
+    handshakeTimer_->stop();
+    // Discord removes the activity when the connection is closed. Closing immediately (rather
+    // than waiting for pending writes) lets the socket be reused right away if enabled again.
+    socket_->abort();
     state_ = State::Disconnected;
   }
 }
@@ -126,6 +136,7 @@ void IpcClient::tryNextSocket() {
 void IpcClient::onConnected() {
   state_ = State::Handshaking;
   buffer_.clear();
+  handshakeTimer_->start();
 
   const QJsonObject handshake{{"v", 1}, {"client_id", clientId_}};
   writeFrame(Opcode::Handshake, QJsonDocument{handshake}.toJson(QJsonDocument::Compact));
@@ -134,6 +145,7 @@ void IpcClient::onConnected() {
 void IpcClient::onDisconnected() {
   const bool wasConnected = state_ == State::Handshaking || state_ == State::Ready;
   state_ = State::Disconnected;
+  handshakeTimer_->stop();
   buffer_.clear();
 
   if (wasConnected) emit disconnected();
@@ -150,8 +162,10 @@ void IpcClient::readFrames() {
   while (buffer_.size() >= kHeaderSize) {
     const auto opcode = qFromLittleEndian<qint32>(buffer_.constData());
     const auto length = qFromLittleEndian<qint32>(buffer_.constData() + 4);
-    if (length < 0) {
+    if (length < 0 || length > kMaxFrameSize) {
+      qWarning() << "Discord: invalid frame length" << length;
       socket_->abort();
+      if (state_ != State::Disconnected) onDisconnected();
       return;
     }
     if (buffer_.size() < kHeaderSize + length) break;
@@ -170,6 +184,7 @@ void IpcClient::handleFrame(Opcode opcode, const QByteArray& payload) {
       const auto event = json["evt"].toString();
       if (json["cmd"].toString() == u"DISPATCH" && event == u"READY") {
         state_ = State::Ready;
+        handshakeTimer_->stop();
         emit ready();
         if (activity_.isObject()) sendActivity();
       } else if (event == u"ERROR") {
@@ -215,4 +230,4 @@ void IpcClient::sendActivity() {
   writeFrame(Opcode::Frame, QJsonDocument{command}.toJson(QJsonDocument::Compact));
 }
 
-}  // namespace link::discord
+}  // namespace discord

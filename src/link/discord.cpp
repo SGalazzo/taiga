@@ -30,12 +30,11 @@
 #include "taiga/settings.hpp"
 #include "track/media.hpp"
 
-namespace link::discord {
+namespace discord {
 
 namespace {
 
 constexpr auto kApplicationId = "379871385176244224";
-constexpr int kActivityTypePlaying = 0;
 constexpr int kActivityTypeWatching = 3;
 constexpr int kStatusDisplayDetails = 2;  // show `details` instead of the application name
 constexpr qsizetype kMinTextLength = 2;
@@ -61,7 +60,7 @@ QString formatEpisode(const track::Episode& episode, const int episodeCount) {
 
 }  // namespace
 
-std::optional<QJsonObject> buildActivity(const track::Episode& episode, const bool basic) {
+std::optional<QJsonObject> buildActivity(const track::Episode& episode) {
   const auto* item = anime::db.item(episode.animeId());
   if (!item) return std::nullopt;
 
@@ -73,13 +72,13 @@ std::optional<QJsonObject> buildActivity(const track::Episode& episode, const bo
   const auto imageUrl = QString::fromStdString(item->image_url);
 
   QJsonObject assets{
-      {"large_image", !basic && imageUrl.startsWith(u"https://") ? imageUrl : u"default"_s},
+      {"large_image", imageUrl.startsWith(u"https://") ? imageUrl : u"default"_s},
       {"small_image", sync::serviceSlug(serviceId)},
       {"small_text", sync::serviceName(serviceId)},
   };
 
   QJsonObject activity{
-      {"type", basic ? kActivityTypePlaying : kActivityTypeWatching},
+      {"type", kActivityTypeWatching},
       {"buttons",
        QJsonArray{QJsonObject{{"label", "View Anime"}, {"url", sync::animePageUrl(item->id)}}}},
   };
@@ -87,7 +86,7 @@ std::optional<QJsonObject> buildActivity(const track::Episode& episode, const bo
   if (const auto title = fitText(QString::fromStdString(anime::preferredTitle(*item)))) {
     activity["details"] = *title;
     assets["large_text"] = *title;
-    if (!basic) activity["status_display_type"] = kStatusDisplayDetails;
+    activity["status_display_type"] = kStatusDisplayDetails;
   }
   if (const auto state = fitText(formatEpisode(episode, item->episode_count))) {
     activity["state"] = *state;
@@ -105,12 +104,6 @@ Presence::Presence(QObject* parent)
   updateTimer_->setSingleShot(true);
   updateTimer_->setInterval(std::chrono::milliseconds{1500});
   connect(updateTimer_, &QTimer::timeout, this, &Presence::update);
-
-  connect(client_, &IpcClient::activityRejected, this, [this]() {
-    if (basic_) return;
-    basic_ = true;  // retry once without fields that Discord might not accept
-    update();
-  });
 }
 
 void Presence::init() {
@@ -139,7 +132,7 @@ void Presence::onEpisodeChanged(const std::optional<track::Episode>& episode) {
 void Presence::update() {
   if (!client_->isEnabled()) return;
 
-  const auto activity = episode_ ? buildActivity(*episode_, basic_) : std::nullopt;
+  const auto activity = episode_ ? buildActivity(*episode_) : std::nullopt;
   client_->setActivity(activity ? QJsonValue{*activity} : QJsonValue{});
 }
 
@@ -148,4 +141,4 @@ Presence* presence() {
   return instance;
 }
 
-}  // namespace link::discord
+}  // namespace discord

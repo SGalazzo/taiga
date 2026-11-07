@@ -88,7 +88,7 @@ int Application::run() {
   sync::queue.init();
   track::media::detection()->init();
   track::updateSession()->init();
-  link::discord::presence()->init();
+  discord::presence()->init();
   gui::imageProvider.init();
 
   gui::theme.initStyle();

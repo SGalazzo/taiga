@@ -27,7 +27,7 @@
 class QLocalSocket;
 class QTimer;
 
-namespace link::discord {
+namespace discord {
 
 // Client for the local IPC socket of the Discord desktop app, used to set rich presence.
 // See https://discord.com/developers/docs/topics/rpc
@@ -36,6 +36,7 @@ class IpcClient final : public QObject {
   Q_DISABLE_COPY_MOVE(IpcClient)
 
 public:
+  // `retryInterval` is also how long to wait for Discord to answer the handshake.
   IpcClient(const QString& clientId, QObject* parent = nullptr,
             const QString& socketPrefix = QStringLiteral("discord-ipc-"),
             std::chrono::milliseconds retryInterval = std::chrono::seconds{20});
@@ -89,6 +90,7 @@ private:
 
   QLocalSocket* socket_ = nullptr;
   QTimer* retryTimer_ = nullptr;
+  QTimer* handshakeTimer_ = nullptr;
   QByteArray buffer_;
 
   QJsonValue activity_;
@@ -98,4 +100,4 @@ private:
   bool retryAllowed_ = true;
 };
 
-}  // namespace link::discord
+}  // namespace discord

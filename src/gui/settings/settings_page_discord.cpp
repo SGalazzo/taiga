@@ -35,7 +35,7 @@ void SettingsPageDiscord::load() {
 void SettingsPageDiscord::apply() const {
   const bool enabled = ui_->discordEnabledCheckBox->isChecked();
   taiga::settings.setDiscordEnabled(enabled);
-  link::discord::presence()->setEnabled(enabled);  // settings have no change notifications
+  discord::presence()->setEnabled(enabled);  // settings have no change notifications
 }
 
 }  // namespace gui
