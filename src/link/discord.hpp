@@ -32,8 +32,10 @@ class IpcClient;
 
 // Activity for the episode being watched, or nothing if it should not be shared (unknown or
 // private anime). `basic` drops the fields that Discord might reject.
-std::optional<QJsonObject> buildActivity(const track::Episode& episode, qint64 startTime,
-                                         bool basic = false);
+//
+// There is no elapsed time: media detection cannot tell whether playback is paused, so the timer
+// would keep running.
+std::optional<QJsonObject> buildActivity(const track::Episode& episode, bool basic = false);
 
 class Presence final : public QObject {
   Q_OBJECT
@@ -53,7 +55,6 @@ private:
   IpcClient* client_ = nullptr;
   QTimer* updateTimer_ = nullptr;
   std::optional<track::Episode> episode_;
-  qint64 startTime_ = 0;
   bool basic_ = false;
 };
 

@@ -19,7 +19,6 @@
 #include "discord.hpp"
 
 #include <QCoreApplication>
-#include <QDateTime>
 #include <QJsonArray>
 #include <QTimer>
 
@@ -60,14 +59,9 @@ QString formatEpisode(const track::Episode& episode, const int episodeCount) {
                           : u"Episode %1"_s.arg(number);
 }
 
-bool isSameEpisode(const track::Episode& a, const track::Episode& b) {
-  return a.animeId() == b.animeId() && a.episodeNumberRange() == b.episodeNumberRange();
-}
-
 }  // namespace
 
-std::optional<QJsonObject> buildActivity(const track::Episode& episode, const qint64 startTime,
-                                         const bool basic) {
+std::optional<QJsonObject> buildActivity(const track::Episode& episode, const bool basic) {
   const auto* item = anime::db.item(episode.animeId());
   if (!item) return std::nullopt;
 
@@ -86,7 +80,6 @@ std::optional<QJsonObject> buildActivity(const track::Episode& episode, const qi
 
   QJsonObject activity{
       {"type", basic ? kActivityTypePlaying : kActivityTypeWatching},
-      {"timestamps", QJsonObject{{"start", startTime}}},
       {"buttons",
        QJsonArray{QJsonObject{{"label", "View Anime"}, {"url", sync::animePageUrl(item->id)}}}},
   };
@@ -139,9 +132,6 @@ void Presence::setEnabled(bool enabled) {
 }
 
 void Presence::onEpisodeChanged(const std::optional<track::Episode>& episode) {
-  if (!episode || !episode_ || !isSameEpisode(*episode, *episode_)) {
-    startTime_ = QDateTime::currentSecsSinceEpoch();
-  }
   episode_ = episode;
   updateTimer_->start();
 }
@@ -149,7 +139,7 @@ void Presence::onEpisodeChanged(const std::optional<track::Episode>& episode) {
 void Presence::update() {
   if (!client_->isEnabled()) return;
 
-  const auto activity = episode_ ? buildActivity(*episode_, startTime_, basic_) : std::nullopt;
+  const auto activity = episode_ ? buildActivity(*episode_, basic_) : std::nullopt;
   client_->setActivity(activity ? QJsonValue{*activity} : QJsonValue{});
 }
 
