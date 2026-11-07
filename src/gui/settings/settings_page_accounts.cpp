@@ -19,11 +19,18 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDesktopServices>
 #include <QGroupBox>
+#include <QInputDialog>
 #include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QUrl>
 #include <algorithm>
 #include <string>
 
+#include "sync/myanimelist/myanimelist.hpp"
+#include "sync/myanimelist/myanimelist_utils.hpp"
 #include "sync/service.hpp"
 #include "taiga/accounts.hpp"
 #include "taiga/settings.hpp"
@@ -53,6 +60,34 @@ SettingsPageAccounts::SettingsPageAccounts(Ui::SettingsDialog* ui, QDialog* dial
 
   connect(ui_->serviceComboBox, &QComboBox::currentIndexChanged, this,
           [this]() { updateVisibleGroup(); });
+
+  connect(ui_->myanimelistAuthorizeButton, &QPushButton::clicked, this,
+          &SettingsPageAccounts::authorizeMyAnimeList);
+
+  const auto* myanimelist = sync::myanimelist::Service::instance();
+
+  connect(myanimelist, &sync::Service::errorOccurred, this, [this](const QString& message) {
+    if (m_myanimelistAuthorizing) m_myanimelistAuthorizationError = message;
+  });
+
+  connect(myanimelist, &sync::Service::authenticationCompleted, this, [this](bool authenticated) {
+    if (!m_myanimelistAuthorizing) return;
+    m_myanimelistAuthorizing = false;
+    ui_->myanimelistAuthorizeButton->setEnabled(true);
+
+    if (!authenticated) {
+      QMessageBox::warning(dialog_, tr("MyAnimeList"),
+                           tr("Authorization failed.\n\n%1").arg(m_myanimelistAuthorizationError));
+      return;
+    }
+
+    // Tokens are stored by the service; show them so that applying the dialog keeps them.
+    const auto& accounts = taiga::accounts;
+    ui_->myanimelistUsernameLineEdit->setText(toQString(accounts.myanimelistUsername()));
+    ui_->myanimelistAccessTokenLineEdit->setText(toQString(accounts.myanimelistAccessToken()));
+    ui_->myanimelistRefreshTokenLineEdit->setText(toQString(accounts.myanimelistRefreshToken()));
+    QMessageBox::information(dialog_, tr("MyAnimeList"), tr("Authorization succeeded."));
+  });
 }
 
 void SettingsPageAccounts::load() {
@@ -96,6 +131,28 @@ void SettingsPageAccounts::apply() const {
   accounts.setMyanimelistUsername(toStdString(ui_->myanimelistUsernameLineEdit));
   accounts.setMyanimelistAccessToken(toStdString(ui_->myanimelistAccessTokenLineEdit));
   accounts.setMyanimelistRefreshToken(toStdString(ui_->myanimelistRefreshTokenLineEdit));
+}
+
+void SettingsPageAccounts::authorizeMyAnimeList() {
+  std::string codeVerifier;
+  const auto url = sync::myanimelist::authorizationCodeUrl(codeVerifier);
+  QDesktopServices::openUrl(QUrl{QString::fromStdString(url)});
+
+  bool ok = false;
+  const auto code =
+      QInputDialog::getText(
+          dialog_, tr("MyAnimeList Authorization"),
+          tr("Please enter the PIN shown on the page after logging into MyAnimeList:"),
+          QLineEdit::Normal, {}, &ok)
+          .trimmed();
+  if (!ok || code.isEmpty()) return;
+
+  m_myanimelistAuthorizing = true;
+  m_myanimelistAuthorizationError.clear();
+  ui_->myanimelistAuthorizeButton->setEnabled(false);
+
+  sync::myanimelist::Service::instance()->requestAccessToken(
+      code, QString::fromStdString(codeVerifier));
 }
 
 void SettingsPageAccounts::updateVisibleGroup() {

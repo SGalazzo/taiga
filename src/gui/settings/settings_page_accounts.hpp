@@ -33,7 +33,11 @@ public:
   void apply() const override;
 
 private:
+  void authorizeMyAnimeList();
   void updateVisibleGroup();
+
+  bool m_myanimelistAuthorizing = false;
+  QString m_myanimelistAuthorizationError;
 };
 
 }  // namespace gui
