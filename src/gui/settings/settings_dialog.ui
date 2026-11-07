@@ -632,6 +632,40 @@
            </item>
           </layout>
          </widget>
+         <widget class="QWidget" name="discordPage">
+          <layout class="QVBoxLayout" name="discordPageLayout">
+           <item>
+            <widget class="QCheckBox" name="discordEnabledCheckBox">
+             <property name="text">
+              <string>Show what I'm watching on Discord</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="discordInfoLabel">
+             <property name="text">
+              <string>Requires the Discord desktop app. Anime that are private in your list are never shared.</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="discordVerticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
          <widget class="QWidget" name="streamingPage">
           <layout class="QVBoxLayout" name="verticalLayout_10">
            <item>

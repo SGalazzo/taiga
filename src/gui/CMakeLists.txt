@@ -85,6 +85,8 @@ target_sources(taiga-gui PRIVATE
 	settings/settings_page_advanced.hpp
 	settings/settings_page_application.cpp
 	settings/settings_page_application.hpp
+	settings/settings_page_discord.cpp
+	settings/settings_page_discord.hpp
 	settings/settings_page_library.cpp
 	settings/settings_page_library.hpp
 	settings/settings_page_media_players.cpp
