@@ -28,6 +28,7 @@
 #include <format>
 
 #include "base/file.hpp"
+#include "base/log.hpp"
 #include "base/string.hpp"
 #include "compat/anime.hpp"
 #include "compat/list.hpp"
@@ -276,12 +277,20 @@ void Database::migrateAnimeListKey() {
   }
 
   if (keyedByEntryId) {
+    // Rows are copied oldest first, so the most recently updated one wins for each anime.
     db_.transaction();
-    q.exec("ALTER TABLE anime_list RENAME TO anime_list_old");
-    q.exec(sql("createAnimeList"));
-    q.exec("INSERT OR REPLACE INTO anime_list SELECT * FROM anime_list_old");
-    q.exec("DROP TABLE anime_list_old");
-    db_.commit();
+    const bool migrated =
+        q.exec("ALTER TABLE anime_list RENAME TO anime_list_old") &&
+        q.exec(sql("createAnimeList")) &&
+        q.exec("INSERT OR REPLACE INTO anime_list SELECT * FROM anime_list_old "
+               "ORDER BY CAST(last_updated AS INTEGER)") &&
+        q.exec("DROP TABLE anime_list_old");
+    if (migrated) {
+      db_.commit();
+    } else {
+      qWarning() << "Could not migrate anime list:" << q.lastError().text();
+      db_.rollback();
+    }
   }
 
   db_.close();
