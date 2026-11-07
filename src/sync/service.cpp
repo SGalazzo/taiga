@@ -66,6 +66,10 @@ void Service::onAuthenticationCompleted(bool authenticated) {
 
   if (authenticated) {
     synchronize();
+  } else {
+    // Release an item whose request ended in a failed token refresh, so the queue
+    // does not stay blocked until restart. Does nothing if no item is in flight.
+    queue.complete(false, "Authentication failed.");
   }
 }
 
