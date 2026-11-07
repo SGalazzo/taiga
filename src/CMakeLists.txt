@@ -165,3 +165,22 @@ qt_add_translations(taiga
 	TS_FILE_DIR resources/translations
 	LUPDATE_OPTIONS -no-obsolete -locations none
 )
+
+if (TAIGA_DEPLOY)
+	if (WIN32)
+		add_custom_command(TARGET taiga POST_BUILD
+			COMMAND Qt6::windeployqt --no-translations --no-compiler-runtime
+				--no-opengl-sw --no-system-d3d-compiler $<TARGET_FILE:taiga>
+			VERBATIM
+		)
+	endif()
+	if (TAIGA_PORTABLE)
+		add_custom_command(TARGET taiga POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:taiga>/data
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+				${CMAKE_SOURCE_DIR}/deps/anime-relations/anime-relations.txt
+				$<TARGET_FILE_DIR:taiga>/data/anime-relations.txt
+			VERBATIM
+		)
+	endif()
+endif()
