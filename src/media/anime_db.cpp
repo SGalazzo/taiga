@@ -76,6 +76,8 @@ void Database::init() {
     return;
   }
 
+  migrateAnimeListKey();
+
   readItems();
   readEntries();
   readSettings();
@@ -254,6 +256,34 @@ void Database::createTables() {
   }
 
   db_.commit();
+  db_.close();
+}
+
+// `anime_list` used to be keyed by the service's list entry ID, which is unknown
+// (0) for MyAnimeList and for entries that are not yet synced, so their rows
+// replaced each other.
+void Database::migrateAnimeListKey() {
+  if (!db_.open()) return;
+
+  QSqlQuery q{db_};
+  bool keyedByEntryId = false;
+  if (q.exec("PRAGMA table_info(anime_list)")) {
+    while (q.next()) {
+      if (q.value("name").toString() == "id" && q.value("pk").toInt() > 0) {
+        keyedByEntryId = true;
+      }
+    }
+  }
+
+  if (keyedByEntryId) {
+    db_.transaction();
+    q.exec("ALTER TABLE anime_list RENAME TO anime_list_old");
+    q.exec(sql("createAnimeList"));
+    q.exec("INSERT OR REPLACE INTO anime_list SELECT * FROM anime_list_old");
+    q.exec("DROP TABLE anime_list_old");
+    db_.commit();
+  }
+
   db_.close();
 }
 
