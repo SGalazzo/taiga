@@ -28,6 +28,7 @@
 #include <format>
 
 #include "base/file.hpp"
+#include "base/log.hpp"
 #include "base/string.hpp"
 #include "compat/anime.hpp"
 #include "compat/list.hpp"
@@ -75,6 +76,8 @@ void Database::init() {
     migrateSettingsFromV1();
     return;
   }
+
+  migrateAnimeListKey();
 
   readItems();
   readEntries();
@@ -254,6 +257,42 @@ void Database::createTables() {
   }
 
   db_.commit();
+  db_.close();
+}
+
+// `anime_list` used to be keyed by the service's list entry ID, which is unknown
+// (0) for MyAnimeList and for entries that are not yet synced, so their rows
+// replaced each other.
+void Database::migrateAnimeListKey() {
+  if (!db_.open()) return;
+
+  QSqlQuery q{db_};
+  bool keyedByEntryId = false;
+  if (q.exec("PRAGMA table_info(anime_list)")) {
+    while (q.next()) {
+      if (q.value("name").toString() == "id" && q.value("pk").toInt() > 0) {
+        keyedByEntryId = true;
+      }
+    }
+  }
+
+  if (keyedByEntryId) {
+    // Rows are copied oldest first, so the most recently updated one wins for each anime.
+    db_.transaction();
+    const bool migrated =
+        q.exec("ALTER TABLE anime_list RENAME TO anime_list_old") &&
+        q.exec(sql("createAnimeList")) &&
+        q.exec("INSERT OR REPLACE INTO anime_list SELECT * FROM anime_list_old "
+               "ORDER BY CAST(last_updated AS INTEGER)") &&
+        q.exec("DROP TABLE anime_list_old");
+    if (migrated) {
+      db_.commit();
+    } else {
+      qWarning() << "Could not migrate anime list:" << q.lastError().text();
+      db_.rollback();
+    }
+  }
+
   db_.close();
 }
 
