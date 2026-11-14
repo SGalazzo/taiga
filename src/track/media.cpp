@@ -174,32 +174,60 @@ void Detection::poll() {
     return;
   }
 
-  const auto resultIt = std::ranges::find_if(results, [this](const anisthesia::win::Result& r) {
-    return r.window.handle == currentWindowHandle_;
-  });
-  const auto& result = resultIt != results.end() ? *resultIt : results.front();
+  // Every window is checked, so that a window showing something else (e.g. another browser
+  // window) cannot hide the one that is playing an anime.
+  std::vector<media_t> media;
+  std::vector<std::optional<ResolvedMedia>> resolved;
+  std::vector<Candidate> candidates;
+  for (const auto& result : results) {
+    auto& item = media.emplace_back(flattenMedia(result));
+    auto& entry = resolved.emplace_back(resolveMedia(extractMediaFields(item)));
+    if (entry) entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+    candidates.push_back({
+        .handle = result.window.handle,
+        .hasEpisode = entry.has_value(),
+        .identified = entry && entry->episode.animeId() != anime::kUnknownId,
+    });
+  }
 
-  currentPlayer_ = result.player;
-  currentMedia_ = flattenMedia(result);
-  currentWindowHandle_ = result.window.handle;
-
-  auto resolved = resolveMedia(extractMediaFields(*currentMedia_));
-  if (!resolved) {
+  const auto index = chooseCandidate(candidates, currentWindowHandle_);
+  if (!index) {
     reset();
     return;
   }
 
-  currentFile_ = std::move(resolved->file);
-  auto& episode = resolved->episode;
-
-  const auto animeId = track::recognition::identify(episode);
-  episode.setAnimeId(animeId);
+  currentPlayer_ = results[*index].player;
+  currentMedia_ = std::move(media[*index]);
+  currentWindowHandle_ = results[*index].window.handle;
+  currentFile_ = std::move(resolved[*index]->file);
+  const auto& episode = resolved[*index]->episode;
 
   if (hasEpisodeChanged(episode)) {
     currentEpisode_ = episode;
     emit currentEpisodeChanged(episode);
   }
 #endif
+}
+
+std::optional<std::size_t> chooseCandidate(std::span<const Candidate> candidates,
+                                           const void* currentHandle) {
+  const auto find = [&candidates](auto predicate) -> std::optional<std::size_t> {
+    const auto it = std::ranges::find_if(candidates, predicate);
+    if (it == candidates.end()) return std::nullopt;
+    return static_cast<std::size_t>(it - candidates.begin());
+  };
+  const auto isCurrent = [currentHandle](const Candidate& candidate) {
+    return currentHandle && candidate.handle == currentHandle;
+  };
+
+  if (const auto index = find([&](const Candidate& c) { return isCurrent(c) && c.identified; })) {
+    return index;
+  }
+  if (const auto index = find(&Candidate::identified)) return index;
+  if (const auto index = find([&](const Candidate& c) { return isCurrent(c) && c.hasEpisode; })) {
+    return index;
+  }
+  return find(&Candidate::hasEpisode);
 }
 
 bool Detection::isMediaIdentified() const {
