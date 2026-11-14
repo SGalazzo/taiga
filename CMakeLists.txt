@@ -17,9 +17,14 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 option(TAIGA_PORTABLE "Portable mode" ON)
+option(TAIGA_BUILD_TESTS "Build tests" OFF)
 option(TAIGA_DEPLOY "Copy Qt runtime and anime relations data next to the executable" OFF)
 
 include(TaigaConfig)
 
 add_subdirectory(deps)
 add_subdirectory(src)
+
+if (TAIGA_BUILD_TESTS)
+	include(tests/tests.cmake)
+endif()
