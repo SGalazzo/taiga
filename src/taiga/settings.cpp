@@ -127,6 +127,16 @@ bool Settings::streamingMediaEnabled() const {
   return value("recognition.streaming.enabled", false).toBool();
 }
 
+std::vector<std::string> Settings::streamingSites() const {
+  return value("recognition.streaming.sites").toJsonArray().toVariantList() |
+         std::views::transform([](const QVariant& v) { return v.toString().toStdString(); }) |
+         std::ranges::to<std::vector>();
+}
+
+bool Settings::streamingSitesOnly() const {
+  return value("recognition.streaming.sitesOnly", false).toBool();
+}
+
 bool Settings::syncEnabled() const {
   return value("sync.enabled", true).toBool();
 }
@@ -229,6 +239,17 @@ void Settings::setSharingEnabled(const bool enabled) const {
 
 void Settings::setStreamingMediaEnabled(const bool enabled) const {
   setValue("recognition.streaming.enabled", enabled);
+}
+
+void Settings::setStreamingSites(std::vector<std::string> sites) const {
+  const auto list =
+      sites | std::views::transform([](const std::string& s) { return QString::fromStdString(s); }) |
+      std::ranges::to<QList>();
+  setValue("recognition.streaming.sites", QJsonArray::fromStringList(list));
+}
+
+void Settings::setStreamingSitesOnly(const bool enabled) const {
+  setValue("recognition.streaming.sitesOnly", enabled);
 }
 
 void Settings::setSyncEnabled(const bool enabled) const {

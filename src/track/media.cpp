@@ -29,6 +29,7 @@
 #include "taiga/settings.hpp"
 #include "track/episode.hpp"
 #include "track/media_player.hpp"
+#include "track/media_stream.hpp"
 #include "track/recognition.hpp"
 
 namespace track::media {
@@ -164,8 +165,9 @@ void Detection::poll() {
 #ifdef Q_OS_WINDOWS
   const auto players = getEnabledPlayers(players_);
 
-  static const auto media_proc = [](const anisthesia::MediaInfo&) {
-    return true;  // Accept all media
+  static const auto media_proc = [](const anisthesia::MediaInfo& information) {
+    // Titles of a web browser's other tabs are not needed.
+    return information.type != anisthesia::MediaInfoType::Tab;
   };
 
   std::vector<anisthesia::win::Result> results;
@@ -174,6 +176,39 @@ void Detection::poll() {
     return;
   }
 
+  // Web browsers show all kinds of pages, so only episodes of a known anime are considered there,
+  // unless the user has limited detection to their streaming sites.
+  // An empty list would hide every page, so it counts as not set.
+  const auto sites = taiga::settings.streamingSitesOnly() ? taiga::settings.streamingSites()
+                                                          : std::vector<std::string>{};
+  const bool sitesOnly = !sites.empty();
+  const auto resolveBrowserPage = [&](const anisthesia::win::Result& result,
+                                      const MediaFields& fields) -> std::optional<ResolvedMedia> {
+    if (isPrivateBrowserWindow(QString::fromStdWString(result.window.text).toStdString())) {
+      return std::nullopt;
+    }
+
+    // Pages without an episode number are too likely to be something else (e.g. an article).
+    auto entry = resolveMedia(fields);
+    if (!entry || !entry->episode.episodeNumberRange()) return std::nullopt;
+
+    entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+
+    if (!sitesOnly) {
+      if (entry->episode.animeId() == anime::kUnknownId) return std::nullopt;
+    } else if (fields.url.empty()) {
+      // The address is not always available (e.g. in full screen), so keep the episode that was
+      // already accepted in this window.
+      if (result.window.handle != currentWindowHandle_ || hasEpisodeChanged(entry->episode)) {
+        return std::nullopt;
+      }
+    } else if (!isStreamingSiteUrl(fields.url, sites)) {
+      return std::nullopt;
+    }
+
+    return entry;
+  };
+
   // Every window is checked, so that a window showing something else (e.g. another browser
   // window) cannot hide the one that is playing an anime.
   std::vector<media_t> media;
@@ -181,8 +216,18 @@ void Detection::poll() {
   std::vector<Candidate> candidates;
   for (const auto& result : results) {
     auto& item = media.emplace_back(flattenMedia(result));
-    auto& entry = resolved.emplace_back(resolveMedia(extractMediaFields(item)));
-    if (entry) entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+    const auto fields = extractMediaFields(item);
+    auto& entry = resolved.emplace_back();
+    if (result.player.type == anisthesia::PlayerType::WebBrowser) {
+      entry = resolveBrowserPage(result, fields);
+      // Only the page title is kept.
+      std::erase_if(item.information, [](const anisthesia::MediaInfo& information) {
+        return information.type == anisthesia::MediaInfoType::Url;
+      });
+    } else {
+      entry = resolveMedia(fields);
+      if (entry) entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+    }
     candidates.push_back({
         .handle = result.window.handle,
         .hasEpisode = entry.has_value(),
