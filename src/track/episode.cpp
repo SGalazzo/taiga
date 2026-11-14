@@ -42,11 +42,13 @@ void Episode::setAnimeId(int id) {
 }
 
 // Truncates suffixed numbers (e.g. `4a` -> `4`). Fractional numbers (e.g. `7.5`)
-// are rejected, because they would collide with integer episode numbers.
+// are rejected, because they would collide with integer episode numbers, and so
+// are values that are not numbers at all.
 static std::optional<int> parseEpisodeNumber(const std::string& value) {
   if (value.contains('.')) return std::nullopt;
   int number = 0;
-  std::from_chars(value.data(), value.data() + value.size(), number);
+  const auto [_, ec] = std::from_chars(value.data(), value.data() + value.size(), number);
+  if (ec != std::errc{}) return std::nullopt;
   return number;
 }
 
