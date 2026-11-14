@@ -19,9 +19,9 @@
 #include "episode.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <ranges>
 
-#include "base/string.hpp"
 #include "media/anime.hpp"
 
 namespace track {
@@ -41,13 +41,24 @@ void Episode::setAnimeId(int id) {
   anime_id_ = id;
 }
 
+// Truncates suffixed numbers (e.g. `4a` -> `4`). Fractional numbers (e.g. `7.5`)
+// are rejected, because they would collide with integer episode numbers, and so
+// are values that are not numbers at all.
+static std::optional<int> parseEpisodeNumber(const std::string& value) {
+  if (value.contains('.')) return std::nullopt;
+  int number = 0;
+  const auto [_, ec] = std::from_chars(value.data(), value.data() + value.size(), number);
+  if (ec != std::errc{}) return std::nullopt;
+  return number;
+}
+
 std::optional<std::pair<int, int>> Episode::episodeNumberRange() const {
   const auto numbers = elements(anitomy::ElementKind::Episode);
   if (numbers.empty()) return std::nullopt;
-  // @TODO: `toInt` returns 0 for non-numeric values (e.g. `4a`, `7.5`).
-  // v1 used to truncate (e.g. `4`, `7`) and special-case fractional episodes
-  // to avoid colliding with integer episode numbers.
-  return std::pair{toInt(numbers.front()), toInt(numbers.back())};
+  const auto first = parseEpisodeNumber(numbers.front());
+  const auto last = parseEpisodeNumber(numbers.back());
+  if (!first || !last) return std::nullopt;
+  return std::pair{*first, *last};
 }
 
 void Episode::setEpisodeNumberRange(const std::pair<int, int>& range) {
