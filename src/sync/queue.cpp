@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <chrono>
 #include <format>
+#include <utility>
 
 #include "base/file.hpp"
 #include "base/string.hpp"
@@ -219,7 +220,11 @@ void Queue::processAutomatically() {
 const QueueItem* Queue::currentItem() const {
   if (items_.isEmpty()) return nullptr;
 
-  const auto it = std::ranges::min_element(items_, {}, &QueueItem::time);
+  // Items that failed go after the others, so that one rejected change does not hold up the
+  // rest of the queue. It is retried once nothing else is waiting.
+  const auto it = std::ranges::min_element(items_, {}, [](const QueueItem& item) {
+    return std::pair{item.retry_count, item.time};
+  });
   return &(*it);
 }
 
