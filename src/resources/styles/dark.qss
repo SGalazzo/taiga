@@ -71,3 +71,9 @@ QTreeView#libraryView::item:selected:!active {
 QStatusBar {
   border-top-color: rgba(255, 255, 255, 16%);
 }
+
+/* Dialogs */
+
+QDialog QAbstractItemView {
+  alternate-background-color: rgba(255, 255, 255, 3%);
+}
