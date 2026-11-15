@@ -25,6 +25,7 @@
 #include "gui/library/library_menu.hpp"
 #include "gui/main/main_window.hpp"
 #include "gui/models/library_model.hpp"
+#include "gui/utils/painters.hpp"
 #include "gui/utils/theme.hpp"
 #include "taiga/settings.hpp"
 #include "ui_main_window.h"
@@ -74,10 +75,15 @@ LibraryWidget::LibraryWidget(QWidget* parent)
   }
 
   m_view->installEventFilter(this);
+  m_view->viewport()->installEventFilter(this);
   m_view->setObjectName("libraryView");
   m_view->setFrameShape(QFrame::Shape::NoFrame);
-  m_view->setModel(m_model);
-  m_view->setRootIndex(m_model->index(rootPath));
+  // Without a library folder the model would show the whole computer, where files could then be
+  // moved or deleted.
+  if (!rootPath.isEmpty()) {
+    m_view->setModel(m_model);
+    m_view->setRootIndex(m_model->index(rootPath));
+  }
   m_view->setAlternatingRowColors(true);
   m_view->setAllColumnsShowFocus(true);
   m_view->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -117,6 +123,11 @@ LibraryWidget::LibraryWidget(QWidget* parent)
 }
 
 bool LibraryWidget::eventFilter(QObject* watched, QEvent* event) {
+  if (watched == m_view->viewport() && event->type() == QEvent::Paint && !m_view->model()) {
+    paintEmptyListText(m_view, tr("Add a library folder in Settings to see your anime files."));
+    return true;
+  }
+
   if (watched == m_view && event->type() == QEvent::KeyPress) {
     const auto* keyEvent = static_cast<QKeyEvent*>(event);
     const auto index = m_view->currentIndex();
