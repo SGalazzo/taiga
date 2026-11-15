@@ -37,6 +37,7 @@ public:
 private:
   bool eventFilter(QObject* watched, QEvent* event) override;
   void refreshFolders();
+  void setModel();
   void showContextMenu() const;
 
   LibraryModel* model_ = nullptr;
