@@ -45,6 +45,7 @@ protected:
   void keyPressEvent(QKeyEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void paintEvent(QPaintEvent* event) override;
+  void resizeEvent(QResizeEvent* event) override;
 
 private:
   ListViewBase* m_base = nullptr;
