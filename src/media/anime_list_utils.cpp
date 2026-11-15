@@ -32,7 +32,8 @@ namespace anime::list {
 float getProgressRatio(const Details* item, const Entry* entry) {
   const auto progress = (entry ? entry->watched_episodes : 0);
   const auto total = (item ? item->episode_count : 0);
-  if (!total) return 0.8f;
+  // The length is unknown, so a started anime is shown as mostly watched.
+  if (!total) return progress > 0 ? 0.8f : 0.0f;
   return std::min(progress / static_cast<float>(total), 1.0f);
 }
 
