@@ -105,7 +105,7 @@ QJsonObject buildLibraryEntryObject(const anime::list::Entry& entry,
 
   // Note that we send `null` (rather than `0` or `""`) to remove certain values.
   if (dirty & Field::Episode) {
-    attributes["progress"] = entry.watched_episodes;
+    attributes["progress"] = entry.watchedEpisodes;
   }
   if (dirty & Field::Score) {
     attributes["ratingTwenty"] =
@@ -118,18 +118,17 @@ QJsonObject buildLibraryEntryObject(const anime::list::Entry& entry,
     attributes["reconsuming"] = entry.rewatching;
   }
   if (dirty & Field::RewatchedTimes) {
-    attributes["reconsumeCount"] = entry.rewatched_times;
+    attributes["reconsumeCount"] = entry.rewatchedTimes;
   }
   if (dirty & Field::DateStarted) {
     attributes["startedAt"] =
-        entry.date_started ? fromListDate(QString::fromStdString(entry.date_started.to_string()))
-                           : QJsonValue{QJsonValue::Null};
+        entry.dateStarted ? fromListDate(QString::fromStdString(entry.dateStarted.toString()))
+                          : QJsonValue{QJsonValue::Null};
   }
   if (dirty & Field::DateCompleted) {
     attributes["finishedAt"] =
-        entry.date_completed
-            ? fromListDate(QString::fromStdString(entry.date_completed.to_string()))
-            : QJsonValue{QJsonValue::Null};
+        entry.dateCompleted ? fromListDate(QString::fromStdString(entry.dateCompleted.toString()))
+                            : QJsonValue{QJsonValue::Null};
   }
   if (dirty & Field::Notes) {
     attributes["notes"] = QString::fromStdString(entry.notes);
@@ -137,7 +136,7 @@ QJsonObject buildLibraryEntryObject(const anime::list::Entry& entry,
 
   QJsonObject animeData{
       {"type", "anime"},
-      {"id", QString::number(entry.anime_id)},
+      {"id", QString::number(entry.animeId)},
   };
 
   QJsonObject userData{
@@ -160,10 +159,6 @@ QJsonObject buildLibraryEntryObject(const anime::list::Entry& entry,
   }
 
   return QJsonObject{{"data", data}};
-}
-
-QByteArray formUrlEncode(const QUrlQuery& query) {
-  return query.toString(QUrl::FullyEncoded).toUtf8();
 }
 
 std::optional<int> pagingOffset(const QJsonObject& links, const QString& key) {

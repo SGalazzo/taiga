@@ -18,6 +18,7 @@
 
 #include "service.hpp"
 
+#include <QCoreApplication>
 #include <QMap>
 
 #include "base/log.hpp"
@@ -52,19 +53,19 @@ void Service::logError(const QString& message) {
 }
 
 void Service::onAuthenticationCompleted(bool authenticated) {
-  switch (currentServiceId()) {
+  switch (id_) {
     case ServiceId::MyAnimeList:
-      taiga::accounts.setMyanimelistAuthenticated(authenticated);
+      taiga::accounts()->setMyanimelistAuthenticated(authenticated);
       break;
     case ServiceId::Kitsu:
-      taiga::accounts.setKitsuAuthenticated(authenticated);
+      taiga::accounts()->setKitsuAuthenticated(authenticated);
       break;
     case ServiceId::AniList:
-      taiga::accounts.setAnilistAuthenticated(authenticated);
+      taiga::accounts()->setAnilistAuthenticated(authenticated);
       break;
   }
 
-  if (authenticated) {
+  if (authenticated && id_ == currentServiceId()) {
     synchronize();
   }
 }
@@ -72,7 +73,7 @@ void Service::onAuthenticationCompleted(bool authenticated) {
 ////////////////////////////////////////////////////////////////////////////////
 
 ServiceId currentServiceId() {
-  const auto slug = QString::fromStdString(taiga::settings.service());
+  const auto slug = QString::fromStdString(taiga::settings()->syncService());
   return serviceIdFromSlug(slug);
 }
 
@@ -90,7 +91,7 @@ QString serviceName(const ServiceId serviceId) {
   switch (serviceId) {
     case ServiceId::MyAnimeList: return "MyAnimeList";
     case ServiceId::Kitsu: return "Kitsu";
-    case ServiceId::AniList: return "AniList";  
+    case ServiceId::AniList: return "AniList";
   }
   // clang-format on
   return "Taiga";
@@ -177,15 +178,15 @@ bool synchronize() {
 
   if (!isUserAuthenticated()) {
     const auto username =
-        taiga::accounts.serviceUsername(serviceSlug(currentServiceId()).toStdString());
+        taiga::accounts()->serviceUsername(serviceSlug(currentServiceId()).toStdString());
     if (username.empty()) return false;
 
     fetchListEntries();  // can fetch the list without authentication
     return true;
   }
 
-  if (queue.count() > 0) {
-    queue.process();
+  if (queue()->count() > 0) {
+    queue()->process();
   } else {
     fetchListEntries();
   }
@@ -238,11 +239,11 @@ void deleteListEntry(const int id) {
 bool isUserAuthenticated() {
   switch (currentServiceId()) {
     case ServiceId::MyAnimeList:
-      return taiga::accounts.myanimelistAuthenticated();
+      return taiga::accounts()->myanimelistAuthenticated();
     case ServiceId::Kitsu:
-      return taiga::accounts.kitsuAuthenticated();
+      return taiga::accounts()->kitsuAuthenticated();
     case ServiceId::AniList:
-      return taiga::accounts.anilistAuthenticated();
+      return taiga::accounts()->anilistAuthenticated();
   }
   return false;
 }
@@ -252,11 +253,11 @@ bool willAuthenticate() {
 
   switch (currentServiceId()) {
     case ServiceId::MyAnimeList:
-      return !taiga::accounts.myanimelistAccessToken().empty();
+      return !taiga::accounts()->myanimelistAccessToken().empty();
     case ServiceId::Kitsu:
-      return !taiga::accounts.kitsuAccessToken().empty();
+      return !taiga::accounts()->kitsuPassword().empty();
     case ServiceId::AniList:
-      return !taiga::accounts.anilistToken().empty();
+      return !taiga::accounts()->anilistToken().empty();
   }
   return false;
 }
@@ -276,23 +277,23 @@ QString animePageUrl(const int id) {
 }
 
 void invalidateAnime(const int id) {
-  if (queue.hasItem(id)) return;
+  if (queue()->hasItem(id)) return;
 
-  anime::db.deleteEntry(id);
-  anime::db.deleteItem(id);
+  anime::db()->deleteEntry(id);
+  anime::db()->deleteItem(id);
 }
 
 void pruneMissingEntries(const QSet<int>& fetchedIds) {
   QList<int> staleIds;
 
-  for (const auto animeId : anime::db.entries().keys()) {
+  for (const auto& [animeId, entry] : anime::db()->entries().asKeyValueRange()) {
     if (fetchedIds.contains(animeId)) continue;
-    if (queue.hasItem(animeId)) continue;
+    if (queue()->hasItem(animeId)) continue;
     staleIds.append(animeId);
   }
 
   for (const auto animeId : staleIds) {
-    anime::db.deleteEntry(animeId);
+    anime::db()->deleteEntry(animeId);
   }
 }
 

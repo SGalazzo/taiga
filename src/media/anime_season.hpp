@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,8 +39,8 @@ public:
   Season& operator--();
   std::strong_ordering operator<=>(const Season& season) const;
 
-  bool has_name() const;
-  bool has_year() const;
+  bool hasName() const;
+  bool hasYear() const;
 
   SeasonName name = SeasonName::Unknown;
   std::chrono::year year{0};

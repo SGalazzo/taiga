@@ -30,11 +30,11 @@ namespace {
 
 bool isDisabled(const Player& player) {
   if (player.type == anisthesia::PlayerType::WebBrowser &&
-      !taiga::settings.streamingMediaEnabled()) {
+      !taiga::settings()->streamingDetectionEnabled()) {
     return true;
   }
 
-  const auto disabledPlayers = taiga::settings.disabledMediaPlayers();
+  const auto disabledPlayers = taiga::settings()->disabledPlayers();
 
   return std::ranges::any_of(disabledPlayers, [&player](const std::string& name) {
     return compareStrings(player.name, name, Qt::CaseInsensitive) == 0;
@@ -57,7 +57,7 @@ bool parsePlayersData(std::vector<Player>& players) {
 std::vector<Player> getEnabledPlayers(const std::vector<Player>& players) {
   std::vector<Player> enabledPlayers;
 
-  for (const auto player : players) {
+  for (const auto& player : players) {
     if (isDisabled(player)) continue;
 
     enabledPlayers.emplace_back(player);

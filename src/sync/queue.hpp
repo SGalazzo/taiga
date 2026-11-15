@@ -30,11 +30,11 @@
 namespace sync {
 
 struct QueueItem {
-  int anime_id = 0;
+  int animeId = 0;
   anime::list::Fields dirty;
   std::time_t time = 0;
-  int retry_count = 0;
-  std::string last_error;
+  int retryCount = 0;
+  std::string lastError;
 };
 
 class Queue final : public QObject {
@@ -42,8 +42,7 @@ class Queue final : public QObject {
   Q_DISABLE_COPY_MOVE(Queue)
 
 public:
-  Queue();
-  ~Queue() = default;
+  explicit Queue(QObject* parent);
 
   void init();
 
@@ -97,6 +96,6 @@ private:
   bool modifiedWhileProcessing_ = false;
 };
 
-inline Queue queue;
+Queue* queue();
 
 }  // namespace sync

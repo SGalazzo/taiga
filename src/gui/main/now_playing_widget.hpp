@@ -38,10 +38,12 @@ class NowPlayingWidget final : public QFrame {
 
 public:
   NowPlayingWidget(QWidget* parent);
-  ~NowPlayingWidget() = default;
 
   void reset();
-  void setPlaying(track::Episode episode);
+  void setPlaying(const track::Episode& episode);
+
+protected:
+  void changeEvent(QEvent* event) override;
 
 private:
   struct Content {
@@ -60,17 +62,17 @@ private:
   void render(const std::optional<Content>& content);
   void updateVisibility();
 
-  PosterWidget* m_posterWidget = nullptr;
-  ClickableLabel* m_titleLabel = nullptr;
-  ClickableLabel* m_detailsLabel = nullptr;
-  QLabel* m_iconLabel = nullptr;
-  ClickableLabel* m_statusLabel = nullptr;
-  QWidget* m_actions = nullptr;
-  QPushButton* m_acceptButton = nullptr;
-  QPushButton* m_cancelButton = nullptr;
+  PosterWidget* posterWidget_ = nullptr;
+  ClickableLabel* titleLabel_ = nullptr;
+  ClickableLabel* detailsLabel_ = nullptr;
+  QLabel* iconLabel_ = nullptr;
+  ClickableLabel* statusLabel_ = nullptr;
+  QWidget* actions_ = nullptr;
+  QPushButton* acceptButton_ = nullptr;
+  QPushButton* cancelButton_ = nullptr;
 
-  std::optional<Anime> m_anime;
-  std::optional<track::Episode> m_episode;
+  std::optional<Anime> anime_;
+  std::optional<track::Episode> episode_;
 };
 
 }  // namespace gui

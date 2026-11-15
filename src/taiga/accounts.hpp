@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,8 +42,7 @@ class Accounts final : public QObject, public base::Settings {
   Q_DISABLE_COPY_MOVE(Accounts)
 
 public:
-  Accounts();
-  ~Accounts() = default;
+  explicit Accounts(QObject* parent);
 
   bool anilistAuthenticated() const;
   sync::anilist::RatingSystem anilistRatingSystem() const;
@@ -71,6 +70,8 @@ public:
   void setAnilistToken(const std::string& token) const;
 
   void setKitsuAuthenticated(bool authenticated);
+  void setKitsuCredentials(const std::string& email, const std::string& username,
+                           const std::string& password);
   void setKitsuAccessToken(const std::string& accessToken) const;
   void setKitsuDisplayName(const std::string& displayName) const;
   void setKitsuEmail(const std::string& email) const;
@@ -94,6 +95,6 @@ private:
   QString fileName() const override;
 };
 
-inline Accounts accounts;
+Accounts* accounts();
 
 }  // namespace taiga

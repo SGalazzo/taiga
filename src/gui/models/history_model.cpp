@@ -22,39 +22,47 @@
 #include "media/anime_db.hpp"
 #include "media/anime_history.hpp"
 #include "media/anime_utils.hpp"
+#include "taiga/settings.hpp"
 
 namespace gui {
 
 HistoryModel::HistoryModel(QObject* parent) : QAbstractListModel(parent) {
-  connect(&anime::history, &anime::History::changed, this, [this]() {
+  connect(anime::history(), &anime::History::changed, this, [this]() {
     beginResetModel();
     endResetModel();
+  });
+
+  connect(taiga::settings(), &taiga::Settings::changed, this, [this](const QSet<QString>& keys) {
+    if (!keys.contains(taiga::Settings::Key::kAppTitleLanguage)) return;
+    if (const auto rows = rowCount(); rows > 0) {
+      emit dataChanged(index(0, ColumnTitle), index(rows - 1, ColumnTitle));
+    }
   });
 }
 
 int HistoryModel::rowCount(const QModelIndex&) const {
-  return anime::history.items().size();
+  return anime::history()->items().size();
 }
 
 int HistoryModel::columnCount(const QModelIndex&) const {
-  return NUM_COLUMNS;
+  return NumColumns;
 }
 
 QVariant HistoryModel::data(const QModelIndex& index, int role) const {
   if (!index.isValid()) return {};
 
-  const auto& historyItem = anime::history.items().at(index.row());
+  const auto& historyItem = anime::history()->items().at(index.row());
 
   switch (role) {
     case Qt::DisplayRole: {
-      const auto item = anime::db.item(historyItem.anime_id);
+      const auto item = anime::db()->item(historyItem.animeId);
       switch (index.column()) {
-        case COLUMN_TITLE:
+        case ColumnTitle:
           if (item) return QString::fromStdString(anime::preferredTitle(*item));
           return {};
-        case COLUMN_DETAILS:
+        case ColumnDetails:
           return tr("Episode: %1").arg(historyItem.episode);
-        case COLUMN_MODIFIED:
+        case ColumnModified:
           return formatAsRelativeTime(historyItem.time, "-");
       }
       break;
@@ -62,7 +70,7 @@ QVariant HistoryModel::data(const QModelIndex& index, int role) const {
 
     case Qt::ToolTipRole: {
       switch (index.column()) {
-        case COLUMN_MODIFIED:
+        case ColumnModified:
           return formatTimestamp(historyItem.time);
       }
       break;
@@ -70,7 +78,7 @@ QVariant HistoryModel::data(const QModelIndex& index, int role) const {
 
     case Qt::TextAlignmentRole: {
       switch (index.column()) {
-        case COLUMN_MODIFIED:
+        case ColumnModified:
           return QVariant(Qt::AlignRight | Qt::AlignVCenter);
       }
       break;
@@ -88,9 +96,9 @@ QVariant HistoryModel::headerData(int section, Qt::Orientation orientation, int 
     case Qt::DisplayRole: {
       // clang-format off
       switch (section) {
-        case COLUMN_TITLE: return tr("Title");
-        case COLUMN_DETAILS: return tr("Details");
-        case COLUMN_MODIFIED: return tr("Last modified");
+        case ColumnTitle: return tr("Title");
+        case ColumnDetails: return tr("Details");
+        case ColumnModified: return tr("Last modified");
       }
       // clang-format on
       break;
@@ -98,10 +106,10 @@ QVariant HistoryModel::headerData(int section, Qt::Orientation orientation, int 
 
     case Qt::TextAlignmentRole: {
       switch (section) {
-        case COLUMN_TITLE:
-        case COLUMN_DETAILS:
+        case ColumnTitle:
+        case ColumnDetails:
           return QVariant(Qt::AlignLeft | Qt::AlignVCenter);
-        case COLUMN_MODIFIED:
+        case ColumnModified:
           return QVariant(Qt::AlignRight | Qt::AlignVCenter);
       }
       break;
@@ -109,7 +117,7 @@ QVariant HistoryModel::headerData(int section, Qt::Orientation orientation, int 
 
     case Qt::InitialSortOrderRole: {
       switch (section) {
-        case COLUMN_MODIFIED:
+        case ColumnModified:
           return Qt::DescendingOrder;
         default:
           return Qt::AscendingOrder;

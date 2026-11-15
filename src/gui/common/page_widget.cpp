@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #include "page_widget.hpp"
 
+#include <QFrame>
+
 namespace gui {
 
 PageWidget::PageWidget(QWidget* parent) : QWidget(parent) {
@@ -27,15 +29,21 @@ PageWidget::PageWidget(QWidget* parent) : QWidget(parent) {
   layout->setSpacing(0);
 
   // Toolbar layout
-  m_toolbarLayout = new QHBoxLayout();
-  m_toolbarLayout->setContentsMargins(16, 8, 16, 8);
-  m_toolbarLayout->addStretch();
-  layout->addLayout(m_toolbarLayout);
+  toolbarLayout_ = new QHBoxLayout();
+  toolbarLayout_->setContentsMargins(16, 8, 16, 8);
+  toolbarLayout_->addStretch();
+  layout->addLayout(toolbarLayout_);
 
   // Toolbar
-  m_toolbar = new QToolBar(this);
-  m_toolbar->setIconSize({18, 18});
-  m_toolbarLayout->addWidget(m_toolbar);
+  toolbar_ = new QToolBar(this);
+  toolbar_->setIconSize({18, 18});
+  toolbarLayout_->addWidget(toolbar_);
+
+  // Separates the toolbar from the page content. Its color is set by the stylesheet.
+  auto separator = new QFrame(this);
+  separator->setObjectName("pageSeparator");
+  separator->setFixedHeight(1);
+  layout->addWidget(separator);
 }
 
 }  // namespace gui

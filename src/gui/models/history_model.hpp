@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2025, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,14 +32,13 @@ class HistoryModel final : public QAbstractListModel {
 
 public:
   enum Column {
-    COLUMN_TITLE,
-    COLUMN_DETAILS,
-    COLUMN_MODIFIED,
-    NUM_COLUMNS,
+    ColumnTitle,
+    ColumnDetails,
+    ColumnModified,
+    NumColumns,
   };
 
   HistoryModel(QObject* parent);
-  ~HistoryModel() = default;
 
   int rowCount(const QModelIndex& parent = {}) const override;
   int columnCount(const QModelIndex& parent = {}) const override;

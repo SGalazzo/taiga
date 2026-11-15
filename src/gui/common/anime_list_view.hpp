@@ -35,10 +35,9 @@ class ListView final : public QTreeView {
 public:
   ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* proxyModel,
            AnimeListContext context);
-  ~ListView() = default;
 
   ListViewBase* baseView() {
-    return m_base;
+    return base_;
   }
 
 protected:
@@ -47,7 +46,7 @@ protected:
   void paintEvent(QPaintEvent* event) override;
 
 private:
-  ListViewBase* m_base = nullptr;
+  ListViewBase* base_ = nullptr;
 };
 
 }  // namespace gui

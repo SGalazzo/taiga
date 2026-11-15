@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2025, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 
 namespace track::recognition {
 
-std::string normalize(std::string title) {
+std::string normalize(const std::string& title) {
   auto str = QString::fromStdString(title);
 
   normalizeRomanNumbers(str);
@@ -59,7 +59,7 @@ std::string normalize(std::string title) {
 /////////////////////////////////////////////////////////////////////////////////
 
 void erasePunctuation(QString& str) {
-  static constexpr auto is_removable = [&](const QChar& c) {
+  static constexpr auto isRemovable = [&](const QChar& c) {
     // Control codes, white-space and punctuation characters
     if (c.unicode() <= 0xFF && !c.isLetterOrNumber()) return true;
     // Unicode stars, hearts, notes, etc.
@@ -68,7 +68,7 @@ void erasePunctuation(QString& str) {
     return false;
   };
 
-  str.removeIf(is_removable);
+  str.removeIf(isRemovable);
 }
 
 void normalizeOrdinalNumbers(QString& str) {
@@ -127,7 +127,7 @@ void normalizeSeasonNumbers(QString& str) {
       {"6", {"6th season", "season 6", "series 6", "s6"}},
   };
 
-  for (auto [after, list] : values) {
+  for (const auto& [after, list] : values) {
     for (auto before : list) {
       replaceWholeWord(str, before, after);
     }
@@ -172,6 +172,7 @@ void transliterate(QString& str) {
       case u'꞉': c = u':'; break;  // modifier letter colon (e.g. "Nisekoi:")
 
       // A few common always-equivalent romanizations
+      // NOLINTNEXTLINE(bugprone-branch-clone)
       case u'Ō': str.replace(i, 1, "ou"); break;  // latin capital letter o with macron
       case u'ō': str.replace(i, 1, "ou"); break;  // latin small letter o with macron
       case u'ū': str.replace(i, 1, "uu"); break;  // latin small letter u with macron

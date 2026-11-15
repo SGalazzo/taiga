@@ -18,6 +18,7 @@
 
 #include "queue.hpp"
 
+#include <QCoreApplication>
 #include <QSqlDatabase>
 #include <algorithm>
 #include <chrono>
@@ -36,7 +37,7 @@
 
 namespace sync {
 
-Queue::Queue() : QObject{} {}
+Queue::Queue(QObject* parent) : QObject{parent} {}
 
 void Queue::init() {
   // Wait for changes to settle, so that edits made in a row are sent together.
@@ -77,8 +78,8 @@ void Queue::push(const int animeId, const anime::list::Fields dirty) {
     it->time = std::time(nullptr);
     persistItem(*it);
   } else {
-    QueueItem item{
-        .anime_id = animeId,
+    const QueueItem item{
+        .animeId = animeId,
         .dirty = dirty,
         .time = std::time(nullptr),
     };
@@ -116,9 +117,9 @@ void Queue::process() {
   const auto item = currentItem();
   if (!item) return;
 
-  const auto entry = anime::db.entry(item->anime_id);
+  const auto entry = anime::db()->entry(item->animeId);
   if (!entry) {
-    pop(item->anime_id);
+    pop(item->animeId);
     process();
     return;
   }
@@ -128,17 +129,17 @@ void Queue::process() {
     return;
   }
 
-  processing_ = item->anime_id;
-  deleting_ = entry->pending_delete;
+  processing_ = item->animeId;
+  deleting_ = entry->pendingDelete;
   modifiedWhileProcessing_ = false;
-  emit processing(item->anime_id);
+  emit processing(item->animeId);
 
-  if (entry->pending_delete) {
-    deleteListEntry(item->anime_id);
+  if (entry->pendingDelete) {
+    deleteListEntry(item->animeId);
   } else if (entry->id == anime::list::kUnknownId) {
-    addListEntry(item->anime_id, item->dirty);
+    addListEntry(item->animeId, item->dirty);
   } else {
-    updateListEntry(item->anime_id, item->dirty);
+    updateListEntry(item->animeId, item->dirty);
   }
 }
 
@@ -160,8 +161,8 @@ void Queue::handleResult(const bool success, const QString& error, const ListEnt
   if (!success) {
     const auto it = findItem(animeId);
     if (it != items_.end()) {
-      it->retry_count++;
-      it->last_error = error.toStdString();
+      it->retryCount++;
+      it->lastError = error.toStdString();
       persistItem(*it);
     }
     return;
@@ -171,8 +172,8 @@ void Queue::handleResult(const bool success, const QString& error, const ListEnt
   reconcile(animeId, remote);
   const auto it = findItem(animeId);
   if (modifiedWhileProcessing_ && it != items_.end()) {
-    it->retry_count = 0;
-    it->last_error.clear();
+    it->retryCount = 0;
+    it->lastError.clear();
     persistItem(*it);
     emit changed();
   } else {
@@ -184,17 +185,17 @@ void Queue::handleResult(const bool success, const QString& error, const ListEnt
 }
 
 void Queue::reconcile(const int animeId, const ListEntry* remote) {
-  const auto* local = anime::db.entry(animeId);
+  const auto* local = anime::db()->entry(animeId);
   if (!local) return;
 
   if (deleting_) {
-    if (local->pending_delete) {
-      anime::db.deleteEntry(animeId);
+    if (local->pendingDelete) {
+      anime::db()->deleteEntry(animeId);
     } else {
       // The entry was saved again while the request was in flight, so the server no longer has it.
       auto entry = *local;
       entry.id = anime::list::kUnknownId;
-      anime::db.updateEntry(entry);
+      anime::db()->updateEntry(entry);
     }
     return;
   }
@@ -206,12 +207,12 @@ void Queue::reconcile(const int animeId, const ListEntry* remote) {
       entry = *local;
       entry.id = remote->id;
     }
-    anime::db.updateEntry(entry);
+    anime::db()->updateEntry(entry);
   }
 }
 
 void Queue::processAutomatically() {
-  if (!taiga::settings.syncEnabled()) return;
+  if (!taiga::settings()->syncEnabled()) return;
   if (!isUserAuthenticated() && !willAuthenticate()) return;
 
   process();
@@ -223,7 +224,7 @@ const QueueItem* Queue::currentItem() const {
   // Items that failed go after the others, so that one rejected change does not hold up the
   // rest of the queue. It is retried once nothing else is waiting.
   const auto it = std::ranges::min_element(items_, {}, [](const QueueItem& item) {
-    return std::pair{item.retry_count, item.time};
+    return std::pair{item.retryCount, item.time};
   });
   return &(*it);
 }
@@ -250,11 +251,11 @@ void Queue::clear() {
 }
 
 QList<QueueItem>::iterator Queue::findItem(const int animeId) {
-  return std::ranges::find(items_, animeId, &QueueItem::anime_id);
+  return std::ranges::find(items_, animeId, &QueueItem::animeId);
 }
 
 QList<QueueItem>::const_iterator Queue::findItem(const int animeId) const {
-  return std::ranges::find(items_, animeId, &QueueItem::anime_id);
+  return std::ranges::find(items_, animeId, &QueueItem::animeId);
 }
 
 QString Queue::sql(const QString& name) const {
@@ -313,25 +314,25 @@ void Queue::deleteItem(const int animeId) {
 }
 
 void Queue::bindItemToQuery(const QueueItem& item, QSqlQuery& q) const {
-  q.bindValue(":anime_id", item.anime_id);
+  q.bindValue(":anime_id", item.animeId);
   q.bindValue(":dirty", item.dirty.toInt());
   q.bindValue(":time", static_cast<qlonglong>(item.time));
-  q.bindValue(":retry_count", item.retry_count);
-  q.bindValue(":last_error", item.last_error.empty()
+  q.bindValue(":retry_count", item.retryCount);
+  q.bindValue(":last_error", item.lastError.empty()
                                  ? QVariant()
-                                 : QVariant(QString::fromStdString(item.last_error)));
+                                 : QVariant(QString::fromStdString(item.lastError)));
 }
 
 QueueItem Queue::itemFromQuery(const QSqlQuery& q) const {
   QueueItem item{
-      .anime_id = q.value("anime_id").toInt(),
+      .animeId = q.value("anime_id").toInt(),
       .dirty = anime::list::Fields::fromInt(q.value("dirty").toInt()),
       .time = static_cast<std::time_t>(q.value("time").toLongLong()),
-      .retry_count = q.value("retry_count").toInt(),
+      .retryCount = q.value("retry_count").toInt(),
   };
 
   if (!q.value("last_error").isNull()) {
-    item.last_error = q.value("last_error").toString().toStdString();
+    item.lastError = q.value("last_error").toString().toStdString();
   }
 
   return item;
@@ -339,31 +340,36 @@ QueueItem Queue::itemFromQuery(const QSqlQuery& q) const {
 
 void Queue::migrateFromV1() {
   const auto path = []() {
-    const auto service = taiga::settings.service();
-    return std::format("{}/v1/user/{}@{}/history.xml", taiga::get_data_path(),
-                       taiga::accounts.serviceUsername(service), service);
+    const auto service = taiga::settings()->syncService();
+    return std::format("{}/v1/user/{}@{}/history.xml", taiga::getDataPath(),
+                       taiga::accounts()->serviceUsername(service), service);
   }();
 
   for (const auto& item : compat::v1::readQueue(path)) {
-    if (item.delete_entry) {
-      anime::list::remove(item.anime_id);
+    if (item.deleteEntry) {
+      anime::list::remove(item.animeId);
       continue;
     }
 
-    const auto* previous = anime::db.entry(item.anime_id);
-    anime::list::Entry entry = previous ? *previous : anime::list::Entry{.anime_id = item.anime_id};
+    const auto* previous = anime::db()->entry(item.animeId);
+    anime::list::Entry entry = previous ? *previous : anime::list::Entry{.animeId = item.animeId};
 
-    if (item.episode) entry.watched_episodes = *item.episode;
+    if (item.episode) entry.watchedEpisodes = *item.episode;
     if (item.score) entry.score = *item.score;
     if (item.status) entry.status = *item.status;
     if (item.rewatching) entry.rewatching = *item.rewatching;
-    if (item.rewatched_times) entry.rewatched_times = *item.rewatched_times;
+    if (item.rewatchedTimes) entry.rewatchedTimes = *item.rewatchedTimes;
     if (item.notes) entry.notes = *item.notes;
-    if (item.date_started) entry.date_started = *item.date_started;
-    if (item.date_completed) entry.date_completed = *item.date_completed;
+    if (item.dateStarted) entry.dateStarted = *item.dateStarted;
+    if (item.dateCompleted) entry.dateCompleted = *item.dateCompleted;
 
     anime::list::save(entry);
   }
+}
+
+Queue* queue() {
+  static auto instance = new Queue{qApp};
+  return instance;
 }
 
 }  // namespace sync

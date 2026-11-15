@@ -32,7 +32,7 @@ namespace track::recognition {
 namespace {
 
 QString readRelationsFile() {
-  const auto path = u"%1/anime-relations.txt"_s.arg(taiga::get_data_path());
+  const auto path = u"%1/anime-relations.txt"_s.arg(taiga::getDataPath());
 
   const auto contents = base::readFile(path);
   if (contents.isEmpty()) {
@@ -66,9 +66,9 @@ std::optional<int> serviceIdColumn(const sync::ServiceId serviceId) {
 
 }  // namespace
 
-void Relations::addRule(const int id, const std::pair<int, int>& source_range,
-                        const int destination_id, const std::pair<int, int>& destination_range) {
-  rules_[id].push_back({destination_id, source_range, destination_range});
+void Relations::addRule(const int id, const std::pair<int, int>& sourceRange,
+                        const int destinationId, const std::pair<int, int>& destinationRange) {
+  rules_[id].push_back({destinationId, sourceRange, destinationRange});
 }
 
 void Relations::parseRule(const QString& rule, const int column) {
@@ -143,46 +143,46 @@ void Relations::load(const QString& contents, const int column) {
   }
 }
 
-std::optional<Redirection> Relations::find(const int id, const int episode_number) const {
+std::optional<Redirection> Relations::find(const int id, const int episodeNumber) const {
   const auto it = rules_.find(id);
   if (it == rules_.end()) return std::nullopt;
 
   for (const auto& rule : it->second) {
-    const int distance = episode_number - rule.source_range.first;
+    const int distance = episodeNumber - rule.sourceRange.first;
     if (distance < 0) continue;
-    if (episode_number > rule.source_range.second) continue;
+    if (episodeNumber > rule.sourceRange.second) continue;
 
-    int destination = rule.destination_range.first;
-    if (rule.destination_range.first != rule.destination_range.second) destination += distance;
-    if (destination > rule.destination_range.second) continue;
+    int destination = rule.destinationRange.first;
+    if (rule.destinationRange.first != rule.destinationRange.second) destination += distance;
+    if (destination > rule.destinationRange.second) continue;
 
     return Redirection{
-        .id = rule.destination_id,
-        .episode_range = {destination, destination},
+        .id = rule.destinationId,
+        .episodeRange = {destination, destination},
     };
   }
 
   return std::nullopt;
 }
 
-std::optional<Redirection> findRedirection(const int id, const std::pair<int, int>& episode_range) {
+std::optional<Redirection> findRedirection(const int id, const std::pair<int, int>& episodeRange) {
   const auto column = serviceIdColumn(sync::currentServiceId());
   if (!column) return std::nullopt;
 
   const auto& relations = relationsFor(*column);
 
-  const auto first = relations.find(id, episode_range.first);
+  const auto first = relations.find(id, episodeRange.first);
   if (!first) return std::nullopt;
 
-  if (episode_range.first == episode_range.second) return first;
+  if (episodeRange.first == episodeRange.second) return first;
 
-  const auto second = relations.find(id, episode_range.second);
+  const auto second = relations.find(id, episodeRange.second);
   if (!second) return std::nullopt;
   if (first->id != second->id) return std::nullopt;  // must redirect to the same anime
 
   return Redirection{
       .id = first->id,
-      .episode_range = {first->episode_range.first, second->episode_range.first},
+      .episodeRange = {first->episodeRange.first, second->episodeRange.first},
   };
 }
 

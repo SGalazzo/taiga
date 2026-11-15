@@ -87,7 +87,7 @@ int identify(Episode& episode) {
   std::ranges::sort(matches, std::ranges::greater{}, &Cache::Data::Match::weight);
 
   for (const auto& match : matches) {
-    const auto item = anime::db.item(match.id);
+    const auto item = anime::db()->item(match.id);
     if (!item) continue;
 
     if (!isValidEpisodeType(episode)) continue;
@@ -102,8 +102,8 @@ int identify(Episode& episode) {
       qDebug() << u"Redirection: %1:%2 -> %3:%4"_s.arg(match.id)
                       .arg(formatEpisodeRange(*range))
                       .arg(redirect->id)
-                      .arg(formatEpisodeRange(redirect->episode_range));
-      episode.setEpisodeNumberRange(redirect->episode_range);
+                      .arg(formatEpisodeRange(redirect->episodeRange));
+      episode.setEpisodeNumberRange(redirect->episodeRange);
       return redirect->id;
     }
 

@@ -23,7 +23,6 @@
 #include <chrono>
 
 #include "taiga/settings.hpp"
-#include "track/media.hpp"
 #include "track/update_trigger.hpp"
 #include "ui_settings_dialog.h"
 
@@ -33,40 +32,33 @@ SettingsPageRecognition::SettingsPageRecognition(Ui::SettingsDialog* ui, QDialog
     : SettingsPage(ui, dialog) {
   using taiga::Settings;
 
-  ui_->detectionIntervalSpinBox->setRange(1, 60);
   ui_->updateDelaySpinBox->setRange(static_cast<int>(Settings::kUpdateDelayMin.count()),
                                     static_cast<int>(Settings::kUpdateDelayMax.count()));
 }
 
 void SettingsPageRecognition::load() {
-  using std::chrono::duration_cast;
-  using std::chrono::seconds;
+  ui_->detectionEnabledCheckBox->setChecked(taiga::settings()->detectionEnabled());
 
-  ui_->detectionEnabledCheckBox->setChecked(taiga::settings.detectionEnabled());
-  ui_->detectionIntervalSpinBox->setValue(
-      static_cast<int>(duration_cast<seconds>(taiga::settings.mediaDetectionInterval()).count()));
-
-  ui_->updateDelaySpinBox->setValue(static_cast<int>(taiga::settings.updateDelay().count()));
-  const auto onPlayerClose = taiga::settings.updateTrigger() == track::UpdateTrigger::OnPlayerClose;
+  ui_->updateDelaySpinBox->setValue(static_cast<int>(taiga::settings()->updateDelay().count()));
+  const auto onPlayerClose =
+      taiga::settings()->updateTrigger() == track::UpdateTrigger::OnPlayerClose;
   (onPlayerClose ? ui_->updateOnPlayerCloseRadioButton : ui_->updateAfterDelayRadioButton)
       ->setChecked(true);
-  ui_->updatePauseWhenUnfocusedCheckBox->setChecked(taiga::settings.updatePauseWhenUnfocused());
-  ui_->updateLibraryOnlyCheckBox->setChecked(taiga::settings.updateLibraryOnly());
+  ui_->updatePauseWhenUnfocusedCheckBox->setChecked(taiga::settings()->updatePauseWhenUnfocused());
+  ui_->updateLibraryOnlyCheckBox->setChecked(taiga::settings()->updateLibraryOnly());
 }
 
 void SettingsPageRecognition::apply() const {
   using std::chrono::seconds;
 
-  taiga::settings.setMediaDetectionInterval(seconds{ui_->detectionIntervalSpinBox->value()});
-  taiga::settings.setUpdateDelay(seconds{ui_->updateDelaySpinBox->value()});
-  taiga::settings.setUpdateTrigger(ui_->updateOnPlayerCloseRadioButton->isChecked()
-                                       ? track::UpdateTrigger::OnPlayerClose
-                                       : track::UpdateTrigger::AfterDelay);
-  taiga::settings.setUpdatePauseWhenUnfocused(ui_->updatePauseWhenUnfocusedCheckBox->isChecked());
-  taiga::settings.setUpdateLibraryOnly(ui_->updateLibraryOnlyCheckBox->isChecked());
-
-  // Must come after the interval is saved, since it restarts polling with the new interval.
-  track::media::detection()->setEnabled(ui_->detectionEnabledCheckBox->isChecked());
+  taiga::settings()->setUpdateDelay(seconds{ui_->updateDelaySpinBox->value()});
+  taiga::settings()->setUpdateTrigger(ui_->updateOnPlayerCloseRadioButton->isChecked()
+                                          ? track::UpdateTrigger::OnPlayerClose
+                                          : track::UpdateTrigger::AfterDelay);
+  taiga::settings()->setUpdatePauseWhenUnfocused(
+      ui_->updatePauseWhenUnfocusedCheckBox->isChecked());
+  taiga::settings()->setUpdateLibraryOnly(ui_->updateLibraryOnlyCheckBox->isChecked());
+  taiga::settings()->setDetectionEnabled(ui_->detectionEnabledCheckBox->isChecked());
 }
 
 }  // namespace gui

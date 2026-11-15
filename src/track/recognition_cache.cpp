@@ -18,6 +18,7 @@
 
 #include "recognition_cache.hpp"
 
+#include <QCoreApplication>
 #include <format>
 
 #include "media/anime_db.hpp"
@@ -26,9 +27,9 @@
 
 namespace track::recognition {
 
-Cache::Cache() : QObject{} {
-  connect(&anime::db, &anime::Database::itemUpdated, this, [this](const int id) {
-    if (const auto* item = anime::db.item(id)) {
+Cache::Cache(QObject* parent) : QObject{parent} {
+  connect(anime::db(), &anime::Database::itemUpdated, this, [this](const int id) {
+    if (const auto* item = anime::db()->item(id)) {
       update(*item);
     }
   });
@@ -51,7 +52,7 @@ void Cache::clear() {
 void Cache::init() {
   if (!empty()) return;
 
-  for (const auto& item : anime::db.items()) {
+  for (const auto& item : anime::db()->items()) {
     add(item);
   }
 }
@@ -73,7 +74,7 @@ void Cache::add(const anime::Details& item) {
   };
 
   // User-defined titles
-  if (const auto* settings = anime::db.settings(item.id)) {
+  if (const auto* settings = anime::db()->settings(item.id)) {
     for (const auto& synonym : settings->synonyms) {
       add(synonym, 2.0f);
     }
@@ -85,8 +86,8 @@ void Cache::add(const anime::Details& item) {
   add(item.titles.japanese);
 
   // Main title + year
-  if (item.date_started.year()) {
-    const auto year = std::format("{}", item.date_started.year());
+  if (item.dateStarted.year()) {
+    const auto year = std::format("{}", item.dateStarted.year());
     if (!item.titles.romaji.contains(year)) {
       add(std::format("{} ({})", item.titles.romaji, year), 0.5f);
     }
@@ -107,6 +108,11 @@ void Cache::remove(const anime::Details& item) {
 void Cache::update(const anime::Details& item) {
   remove(item);
   add(item);
+}
+
+Cache* cache() {
+  static auto instance = new Cache{qApp};
+  return instance;
 }
 
 }  // namespace track::recognition

@@ -34,6 +34,8 @@
 #include "gui/utils/theme.hpp"
 #include "media/anime_db.hpp"
 #include "media/anime_history.hpp"
+#include "share/discord.hpp"
+#include "share/http.hpp"
 #include "sync/queue.hpp"
 #include "taiga/config.h"
 #include "taiga/path.hpp"
@@ -44,8 +46,8 @@
 
 namespace taiga {
 
-Application::Application(int argc, char* argv[])
-    : QApplication(argc, argv), shared_memory_(TAIGA_APP_NAME) {
+Application::Application(int& argc, char* argv[])
+    : QApplication(argc, argv), sharedMemory_(TAIGA_APP_NAME) {
   setApplicationName("taiga");
   setApplicationDisplayName("Taiga");
   setApplicationVersion(QString::fromStdString(taiga::version().to_string()));
@@ -78,28 +80,41 @@ int Application::run() {
     return 0;
   }
 
-  connect(&local_server_, &QLocalServer::newConnection, this, &Application::onNewConnection);
-  local_server_.listen(TAIGA_APP_NAME);
+  connect(&localServer_, &QLocalServer::newConnection, this, &Application::onNewConnection);
+  localServer_.listen(TAIGA_APP_NAME);
 
-  taiga::settings.init();
-  anime::db.init();
-  anime::history.init();
-  sync::queue.init();
+  taiga::settings()->init();
+  anime::db()->init();
+  anime::history()->init();
+  sync::queue()->init();
   track::media::detection()->init();
   track::updateSession()->init();
-  gui::imageProvider.init();
+  share::discord::presence()->init();
+  share::http::webhook()->init();
+  gui::imageProvider()->init();
 
-  gui::theme.initStyle();
-  setWindowIcon(gui::theme.getIcon("taiga", "png"));
+  gui::theme()->initStyle();
+  setWindowIcon(gui::theme()->getIcon("taiga", "png"));
 
   QTranslator translator;
   if (translator.load(QLocale::system(), "taiga", "_", ":/i18n")) {
     installTranslator(&translator);
   }
 
+  // The window may be hidden in the tray, so we quit explicitly instead.
+  setQuitOnLastWindowClosed(false);
+
   window_ = new gui::MainWindow();
   window_->init();
 
+  if (!(taiga::settings()->appStartInTray() && window_->canHideToTray())) {
+    showMainWindow();
+  }
+
+  return QApplication::exec();
+}
+
+void Application::showMainWindow() {
 #ifdef Q_OS_WINDOWS
   // Delay showing the window to avoid a white flash.
   window_->setWindowOpacity(0.0);
@@ -112,8 +127,6 @@ int Application::run() {
 #else
   window_->show();
 #endif
-
-  return QApplication::exec();
 }
 
 bool Application::isDebug() const {
@@ -139,7 +152,7 @@ bool Application::notify(QObject* receiver, QEvent* event) {
 }
 
 bool Application::hasPreviousInstance() {
-  return !shared_memory_.create(1);
+  return !sharedMemory_.create(1);
 }
 
 void Application::activatePreviousInstance() {
@@ -149,7 +162,7 @@ void Application::activatePreviousInstance() {
 }
 
 void Application::initLogger() const {
-  const auto directory = u"%1/logs"_s.arg(get_data_path());
+  const auto directory = u"%1/logs"_s.arg(getDataPath());
   QDir().mkpath(directory);
 
   const auto date = QDate::currentDate().toString(Qt::DateFormat::ISODate);
@@ -159,7 +172,7 @@ void Application::initLogger() const {
 }
 
 void Application::onNewConnection() {
-  while (auto socket = local_server_.nextPendingConnection()) {
+  while (auto socket = localServer_.nextPendingConnection()) {
     socket->deleteLater();
   }
   if (window_) {
@@ -174,7 +187,7 @@ void Application::parseCommandLine() {
   });
 
   // This stops the current process in case of an error (e.g. an unknown option was passed).
-  parser_.process(QApplication::arguments());
+  parser_.process(QCoreApplication::arguments());
 
 #ifdef _DEBUG
   options_.debug = true;

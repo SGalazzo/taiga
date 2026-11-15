@@ -1,0 +1,56 @@
+/*
+Colors that differ between light and dark themes. Placeholders (an at sign
+followed by a field name) are replaced with colors from `gui::ThemeColors`.
+*/
+
+/* Toolbar */
+
+QMainWindow > QToolBar {
+  border-bottom-color: @border;
+}
+
+QMainWindow > #centralWidget > QSplitter {
+  background-color: @splitter;
+}
+QMainWindow > #centralWidget > QSplitter::handle {
+  background-color: @border;
+}
+
+QFrame#pageSeparator {
+  background-color: @border;
+}
+
+/* List */
+
+QListView#animeCards,
+QTreeView#animeList > QHeaderView,
+QTreeView#historyView > QHeaderView,
+QTreeView#libraryView > QHeaderView {
+  background-color: @background;
+}
+
+QAbstractItemView[themed="true"] {
+  background-color: @background;
+  alternate-background-color: @itemAlternate;
+}
+QAbstractItemView[themed="true"]::item:hover:!selected {
+  background-color: @itemHover;
+}
+QAbstractItemView[themed="true"]::item:selected:active {
+  background-color: @itemSelected;
+}
+QAbstractItemView[themed="true"]::item:selected:!active {
+  background-color: @itemSelectedInactive;
+}
+
+/* Now Playing */
+
+#nowPlaying {
+  border-top-color: @border;
+}
+
+/* Statusbar */
+
+QStatusBar#statusbar {
+  border-top-color: @border;
+}

@@ -49,14 +49,21 @@ void Service::authenticateUser() {
       return;
     }
 
-    taiga::accounts.setAnilistUsername((*viewer)["name"].toString().toStdString());
-    taiga::accounts.setAnilistRatingSystem(
+    taiga::accounts()->setAnilistUsername((*viewer)["name"].toString().toStdString());
+    taiga::accounts()->setAnilistRatingSystem(
         (*viewer)["mediaListOptions"]["scoreFormat"].toString().toStdString());
 
     emit authenticationCompleted(true);
   };
 
   manager_.post(api_.createRequest(), data, this, callback);
+}
+
+void Service::authorize(const QString& accessToken) {
+  taiga::accounts()->setAnilistToken(accessToken.toStdString());
+  api_.setBearerToken(accessToken.toUtf8());
+
+  authenticateUser();
 }
 
 }  // namespace sync::anilist

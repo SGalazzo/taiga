@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 namespace gui {
 enum class ListViewMode;
 struct AnimeListProxyModelFilter;
-}
+}  // namespace gui
 
 namespace taiga {
 
@@ -34,24 +34,34 @@ class Session final : public base::Settings {
 public:
   int animeListSortColumn() const;
   Qt::SortOrder animeListSortOrder() const;
+  int animeListSecondarySortColumn() const;
+  Qt::SortOrder animeListSecondarySortOrder() const;
   gui::ListViewMode animeListViewMode() const;
   QByteArray mainWindowGeometry() const;
+  bool mainWindowTrayNoticeShown() const;
   QByteArray mediaDialogGeometry() const;
   QByteArray mediaDialogSplitterState() const;
   gui::AnimeListProxyModelFilter searchListFilters() const;
   int searchListSortColumn() const;
   Qt::SortOrder searchListSortOrder() const;
+  int searchListSecondarySortColumn() const;
+  Qt::SortOrder searchListSecondarySortOrder() const;
   gui::ListViewMode searchListViewMode() const;
 
   void setAnimeListSortColumn(const int column) const;
   void setAnimeListSortOrder(const Qt::SortOrder order) const;
+  void setAnimeListSecondarySortColumn(const int column) const;
+  void setAnimeListSecondarySortOrder(const Qt::SortOrder order) const;
   void setAnimeListViewMode(const gui::ListViewMode mode) const;
   void setMainWindowGeometry(const QByteArray& geometry) const;
+  void setMainWindowTrayNoticeShown(const bool shown) const;
   void setMediaDialogGeometry(const QByteArray& geometry) const;
   void setMediaDialogSplitterState(const QByteArray& state) const;
   void setSearchListFilters(const gui::AnimeListProxyModelFilter& filters) const;
   void setSearchListSortColumn(const int column) const;
   void setSearchListSortOrder(const Qt::SortOrder order) const;
+  void setSearchListSecondarySortColumn(const int column) const;
+  void setSearchListSecondarySortOrder(const Qt::SortOrder order) const;
   void setSearchListViewMode(const gui::ListViewMode mode) const;
 
 private:

@@ -23,13 +23,16 @@
 namespace sync::anilist {
 
 class Service final : public sync::Service {
+  Q_OBJECT
+  Q_DISABLE_COPY_MOVE(Service)
+
 public:
   Service();
-  ~Service() = default;
 
   static Service* instance();
 
   void authenticateUser();
+  void authorize(const QString& accessToken);
   void fetchAnime(const int id);
   void search(const SearchParams& params, const int page = 1);
   void fetchListEntries();

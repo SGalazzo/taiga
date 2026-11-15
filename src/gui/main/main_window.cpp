@@ -63,7 +63,7 @@
 
 namespace gui {
 
-MainWindow::MainWindow() : QMainWindow(), ui_(new Ui::MainWindow) {
+MainWindow::MainWindow() : ui_(new Ui::MainWindow) {
   ui_->setupUi(this);
 
   ui_->menubar->hide();
@@ -86,19 +86,19 @@ MainWindow* mainWindow() {
 }
 
 NavigationWidget* MainWindow::navigation() const {
-  return m_navigationWidget;
+  return navigationWidget_;
 }
 
 NowPlayingWidget* MainWindow::nowPlaying() const {
-  return m_nowPlayingWidget;
+  return nowPlayingWidget_;
 }
 
 QLineEdit* MainWindow::searchBox() const {
-  return m_searchBox;
+  return searchBox_;
 }
 
 StatusBarController* MainWindow::statusBarController() const {
-  return m_statusBarController;
+  return statusBarController_;
 }
 
 Ui::MainWindow* MainWindow::ui() const {
@@ -134,40 +134,57 @@ void MainWindow::initActions() {
 
   ui_->actionToggleDetection->setChecked(track::media::detection()->isEnabled());
   connect(ui_->actionToggleDetection, &QAction::toggled, this,
-          [](const bool checked) { track::media::detection()->setEnabled(checked); });
+          [](const bool checked) { taiga::settings()->setDetectionEnabled(checked); });
 
-  ui_->actionToggleSynchronization->setChecked(taiga::settings.syncEnabled());
+  ui_->actionToggleSharing->setChecked(taiga::settings()->sharingEnabled());
+  connect(ui_->actionToggleSharing, &QAction::toggled, this,
+          [](const bool checked) { taiga::settings()->setSharingEnabled(checked); });
+
+  ui_->actionToggleSynchronization->setChecked(taiga::settings()->syncEnabled());
   connect(ui_->actionToggleSynchronization, &QAction::toggled, this,
-          [](const bool checked) { taiga::settings.setSyncEnabled(checked); });
+          [](const bool checked) { taiga::settings()->setSyncEnabled(checked); });
+
+  // Settings can also be changed from the settings dialog.
+  connect(taiga::settings(), &taiga::Settings::changed, this, [this](const QSet<QString>& keys) {
+    if (keys.contains(taiga::Settings::Key::kDetectionEnabled)) {
+      ui_->actionToggleDetection->setChecked(taiga::settings()->detectionEnabled());
+    }
+    if (keys.contains(taiga::Settings::Key::kSharingEnabled)) {
+      ui_->actionToggleSharing->setChecked(taiga::settings()->sharingEnabled());
+    }
+    if (keys.contains(taiga::Settings::Key::kSyncEnabled)) {
+      ui_->actionToggleSynchronization->setChecked(taiga::settings()->syncEnabled());
+    }
+  });
 }
 
 void MainWindow::initIcons() {
-  ui_->menuLibraryFolders->setIcon(theme.getIcon("folder"));
-  ui_->menuExport->setIcon(theme.getIcon("export_notes"));
+  ui_->menuLibraryFolders->setIcon(theme()->getIcon("folder"));
+  ui_->menuExport->setIcon(theme()->getIcon("export_notes"));
 
-  ui_->actionAddNewFolder->setIcon(theme.getIcon("create_new_folder"));
-  ui_->actionAbout->setIcon(theme.getIcon("info"));
-  ui_->actionBack->setIcon(theme.getIcon("arrow_back"));
-  ui_->actionCheckForUpdates->setIcon(theme.getIcon("cloud_download"));
-  ui_->actionDonate->setIcon(theme.getIcon("favorite"));
-  ui_->actionExit->setIcon(theme.getIcon("logout"));
-  ui_->actionForward->setIcon(theme.getIcon("arrow_forward"));
-  ui_->actionMenu->setIcon(theme.getIcon("menu"));
-  ui_->actionPlayNextEpisode->setIcon(theme.getIcon("skip_next"));
-  ui_->actionPlayRandomAnime->setIcon(theme.getIcon("shuffle"));
-  ui_->actionProfile->setIcon(theme.getIcon("account_circle"));
-  ui_->actionScanAvailableEpisodes->setIcon(theme.getIcon("pageview"));
-  ui_->actionSettings->setIcon(theme.getIcon("settings"));
-  ui_->actionSupport->setIcon(theme.getIcon("help"));
-  ui_->actionSynchronize->setIcon(theme.getIcon("sync"));
+  ui_->actionAddNewFolder->setIcon(theme()->getIcon("create_new_folder"));
+  ui_->actionAbout->setIcon(theme()->getIcon("info"));
+  ui_->actionBack->setIcon(theme()->getIcon("arrow_back"));
+  ui_->actionCheckForUpdates->setIcon(theme()->getIcon("cloud_download"));
+  ui_->actionDonate->setIcon(theme()->getIcon("favorite"));
+  ui_->actionExit->setIcon(theme()->getIcon("logout"));
+  ui_->actionForward->setIcon(theme()->getIcon("arrow_forward"));
+  ui_->actionMenu->setIcon(theme()->getIcon("menu"));
+  ui_->actionPlayNextEpisode->setIcon(theme()->getIcon("skip_next"));
+  ui_->actionPlayRandomAnime->setIcon(theme()->getIcon("shuffle"));
+  ui_->actionProfile->setIcon(theme()->getIcon("account_circle"));
+  ui_->actionScanAvailableEpisodes->setIcon(theme()->getIcon("pageview"));
+  ui_->actionSettings->setIcon(theme()->getIcon("settings"));
+  ui_->actionSupport->setIcon(theme()->getIcon("help"));
+  ui_->actionSynchronize->setIcon(theme()->getIcon("sync"));
 }
 
 void MainWindow::initNavigation() {
-  m_navigationWidget = new NavigationWidget(this);
-  // Connects to m_navigationWidget's signals on construction, so it must come after.
-  m_navigationController = new NavigationController(this);
+  navigationWidget_ = new NavigationWidget(this);
+  // Connects to navigationWidget_'s signals on construction, so it must come after.
+  navigationController_ = new NavigationController(this);
 
-  const bool hasWatching = std::ranges::any_of(anime::db.entries(), [](const auto& entry) {
+  const bool hasWatching = std::ranges::any_of(anime::db()->entries(), [](const auto& entry) {
     return entry.status == anime::list::Status::Watching;
   });
   if (hasWatching) {
@@ -176,14 +193,14 @@ void MainWindow::initNavigation() {
     navigateTo(MainWindowPage::List);
   }
 
-  ui_->splitter->insertWidget(0, m_navigationWidget);
+  ui_->splitter->insertWidget(0, navigationWidget_);
 }
 
 void MainWindow::initNowPlaying() {
-  m_nowPlayingWidget = new NowPlayingWidget(ui_->centralWidget);
+  nowPlayingWidget_ = new NowPlayingWidget(ui_->centralWidget);
 
-  ui_->centralWidget->layout()->addWidget(m_nowPlayingWidget);
-  m_nowPlayingWidget->hide();
+  ui_->centralWidget->layout()->addWidget(nowPlayingWidget_);
+  nowPlayingWidget_->hide();
 }
 
 void MainWindow::initPage(MainWindowPage page) {
@@ -191,7 +208,7 @@ void MainWindow::initPage(MainWindowPage page) {
 
   if (initializedPages.contains(page)) return;
 
-  static const auto init_page = [](QWidget* page, QWidget* widget) {
+  static const auto initPage = [](QWidget* page, QWidget* widget) {
     const auto layout = new QHBoxLayout(page);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(widget);
@@ -202,25 +219,26 @@ void MainWindow::initPage(MainWindowPage page) {
       break;
 
     case MainWindowPage::Search:
-      m_searchWidget = new SearchWidget(ui_->searchPage);
-      init_page(ui_->searchPage, m_searchWidget);
+      searchWidget_ = new SearchWidget(ui_->searchPage);
+      initPage(ui_->searchPage, searchWidget_);
       break;
 
     case MainWindowPage::List:
-      m_listWidget = new ListWidget(ui_->listPage);
-      init_page(ui_->listPage, m_listWidget);
+      listWidget_ = new ListWidget(ui_->listPage);
+      initPage(ui_->listPage, listWidget_);
       break;
 
     case MainWindowPage::History:
-      m_historyWidget = new HistoryWidget(ui_->historyPage);
-      init_page(ui_->historyPage, m_historyWidget);
+      historyWidget_ = new HistoryWidget(ui_->historyPage);
+      initPage(ui_->historyPage, historyWidget_);
       break;
 
     case MainWindowPage::Library:
-      m_libraryWidget = new LibraryWidget(ui_->libraryPage);
-      init_page(ui_->libraryPage, m_libraryWidget);
+      libraryWidget_ = new LibraryWidget(ui_->libraryPage);
+      initPage(ui_->libraryPage, libraryWidget_);
       break;
 
+    // NOLINTNEXTLINE(bugprone-branch-clone)
     case MainWindowPage::Torrents:
       break;
 
@@ -244,7 +262,7 @@ void MainWindow::initStatusbar() {
   spinnerLayout->addWidget(spinner);
   ui_->statusbar->addPermanentWidget(spinnerContainer);
 
-  m_statusBarController = new StatusBarController(this, statusbar, spinner);
+  statusBarController_ = new StatusBarController(this, statusbar, spinner);
 
   const QList<sync::Service*> services{
       sync::anilist::Service::instance(),
@@ -256,32 +274,32 @@ void MainWindow::initStatusbar() {
             [this](const bool authenticated) {
               if (!authenticated) return;
 
-              const auto sender_service = qobject_cast<sync::Service*>(sender());
-              const auto slug = sync::serviceSlug(sender_service->id()).toStdString();
-              const auto username = taiga::accounts.serviceUsername(slug);
+              const auto senderService = qobject_cast<sync::Service*>(sender());
+              const auto slug = sync::serviceSlug(senderService->id()).toStdString();
+              const auto username = taiga::accounts()->serviceUsername(slug);
 
-              m_statusBarController->showMessage({
+              statusBarController_->showMessage({
                   .source = StatusBarController::Source::Sync,
                   .text = tr("Logged in as %1.").arg(username),
                   .spin = false,
               });
             });
     connect(service, &sync::Service::listEntriesFetched, this, [this]() {
-      m_statusBarController->clearMessage(StatusBarController::Source::Sync);
+      statusBarController_->clearMessage(StatusBarController::Source::Sync);
       setEnabled(true);
     });
     connect(service, &sync::Service::errorOccurred, this, [this](const QString& message) {
-      const auto sender_service = qobject_cast<sync::Service*>(sender());
-      m_statusBarController->showMessage({
+      const auto senderService = qobject_cast<sync::Service*>(sender());
+      statusBarController_->showMessage({
           .source = StatusBarController::Source::Sync,
-          .text = sync::tagMessage(sender_service->id(), message),
+          .text = sync::tagMessage(senderService->id(), message),
           .spin = false,
       });
       setEnabled(true);
     });
     connect(service, &sync::Service::transferProgress, this,
             [this](const qint64 current, const qint64 total) {
-              m_statusBarController->showMessage({
+              statusBarController_->showMessage({
                   .source = StatusBarController::Source::Sync,
                   .text = tr("Synchronizing with %1... (%2)")
                               .arg(sync::serviceName(sync::currentServiceId()))
@@ -290,22 +308,22 @@ void MainWindow::initStatusbar() {
             });
   }
 
-  connect(&sync::queue, &sync::Queue::changed, this, [this]() {
-    if (sync::queue.count() == 0) {
-      m_statusBarController->clearMessage(StatusBarController::Source::Sync);
+  connect(sync::queue(), &sync::Queue::changed, this, [this]() {
+    if (sync::queue()->count() == 0) {
+      statusBarController_->clearMessage(StatusBarController::Source::Sync);
       setEnabled(true);
     }
   });
 
-  connect(&sync::queue, &sync::Queue::processing, this, [this](const int animeId) {
-    const auto item = anime::db.item(animeId);
-    const auto entry = anime::db.entry(animeId);
+  connect(sync::queue(), &sync::Queue::processing, this, [this](const int animeId) {
+    const auto item = anime::db()->item(animeId);
+    const auto entry = anime::db()->entry(animeId);
     if (!item || !entry) return;
 
     const auto title = anime::preferredTitle(*item);
 
     QString text;
-    if (entry->pending_delete) {
+    if (entry->pendingDelete) {
       text = tr("Deleting list entry... (%1)").arg(title);
     } else if (entry->id == anime::list::kUnknownId) {
       text = tr("Adding to list... (%1)").arg(title);
@@ -313,32 +331,33 @@ void MainWindow::initStatusbar() {
       text = tr("Updating list entry... (%1)").arg(title);
     }
 
-    m_statusBarController->showMessage({
+    statusBarController_->showMessage({
         .source = StatusBarController::Source::Sync,
         .text = text,
     });
   });
 
-  connect(&sync::queue, &sync::Queue::queuedWhileUnauthenticated, this, [this](const int animeId) {
-    const auto item = anime::db.item(animeId);
+  connect(sync::queue(), &sync::Queue::queuedWhileUnauthenticated, this, [this](const int animeId) {
+    const auto item = anime::db()->item(animeId);
     if (!item) return;
 
-    m_statusBarController->showMessage({
+    statusBarController_->showMessage({
         .source = StatusBarController::Source::Sync,
         .text = tr("%1 is queued for update.").arg(anime::preferredTitle(*item)),
         .spin = false,
     });
   });
 
-  connect(&anime::db, &anime::Database::itemDeleted, this, [this](const int, const QString& title) {
-    if (title.isEmpty()) return;
+  connect(anime::db(), &anime::Database::itemDeleted, this,
+          [this](const int, const QString& title) {
+            if (title.isEmpty()) return;
 
-    m_statusBarController->showMessage({
-        .source = StatusBarController::Source::Sync,
-        .text = tr("Anime removed from database: %1").arg(title),
-        .spin = false,
-    });
-  });
+            statusBarController_->showMessage({
+                .source = StatusBarController::Source::Sync,
+                .text = tr("Anime removed from database: %1").arg(title),
+                .spin = false,
+            });
+          });
 }
 
 void MainWindow::initToolbar() {
@@ -363,10 +382,10 @@ void MainWindow::initToolbar() {
 
   // Search box
   {
-    m_searchBox = new QLineEdit();
-    m_searchBox->setClearButtonEnabled(true);
-    m_searchBox->setFixedWidth(320);
-    m_searchBox->setPlaceholderText(tr("Search"));
+    searchBox_ = new QLineEdit();
+    searchBox_->setClearButtonEnabled(true);
+    searchBox_->setFixedWidth(320);
+    searchBox_->setPlaceholderText(tr("Search"));
 
     const auto before = ui_->actionSettings;
     const auto insertSpacer = [this](QAction* before) {
@@ -378,7 +397,7 @@ void MainWindow::initToolbar() {
     };
 
     insertSpacer(before);
-    ui_->toolbar->insertWidget(before, m_searchBox);
+    ui_->toolbar->insertWidget(before, searchBox_);
     insertSpacer(before);
   }
 }
@@ -392,41 +411,58 @@ void MainWindow::initTrayIcon() {
   menu->addSeparator();
   menu->addAction(ui_->actionExit);
 
-  m_trayIcon = new TrayIcon(this, windowIcon(), menu);
+  trayIcon_ = new TrayIcon(this, windowIcon(), menu);
 
-  connect(m_trayIcon, &TrayIcon::activated, this, &MainWindow::displayWindow);
-  connect(m_trayIcon, &TrayIcon::messageClicked, this, &MainWindow::displayWindow);
+  connect(trayIcon_, &TrayIcon::activated, this, &MainWindow::displayWindow);
+  connect(trayIcon_, &TrayIcon::messageClicked, this, &MainWindow::displayWindow);
 
   connect(track::updateSession(), &track::UpdateSession::confirmationRequested, this,
           [this](const track::UpdateState& state) {
             if (isActiveWindow()) return;
 
             const auto episode = track::media::detection()->getCurrentEpisode();
-            const auto item = episode ? anime::db.item(episode->animeId()) : nullptr;
+            const auto item = episode ? anime::db()->item(episode->animeId()) : nullptr;
             if (!item) return;
 
-            m_trayIcon->showMessage(tr("Confirm list update"),
-                                    tr("%1: episode %2 is ahead of your progress (%3).")
-                                        .arg(QString::fromStdString(anime::preferredTitle(*item)))
-                                        .arg(state.episode)
-                                        .arg(state.previousEpisode));
+            trayIcon_->showMessage(tr("Confirm list update"),
+                                   tr("%1: episode %2 is ahead of your progress (%3).")
+                                       .arg(QString::fromStdString(anime::preferredTitle(*item)))
+                                       .arg(state.episode)
+                                       .arg(state.previousEpisode));
           });
 
   connect(track::media::detection(), &track::media::Detection::currentEpisodeChanged, this,
           [this](std::optional<track::Episode> episode) {
             if (!episode) {
-              m_trayIcon->setBadge(TrayIcon::Badge::None);
+              trayIcon_->setBadge(TrayIcon::Badge::None);
             } else {
-              const bool recognized = anime::db.item(episode->animeId()) != nullptr;
-              m_trayIcon->setBadge(recognized ? TrayIcon::Badge::Success : TrayIcon::Badge::Error);
+              const bool recognized = anime::db()->item(episode->animeId()) != nullptr;
+              trayIcon_->setBadge(recognized ? TrayIcon::Badge::Success : TrayIcon::Badge::Error);
             }
           });
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
   taiga::session.setMainWindowGeometry(saveGeometry());
-  if (m_listWidget) m_listWidget->saveState();
-  if (m_searchWidget) m_searchWidget->saveState();
+  if (listWidget_) listWidget_->saveState();
+  if (searchWidget_) searchWidget_->saveState();
+
+  // Closed by the user, rather than by quitting the application.
+  if (event->spontaneous()) {
+    if (taiga::settings()->appCloseToTray() && canHideToTray()) {
+      hide();
+      event->ignore();
+      if (!taiga::session.mainWindowTrayNoticeShown()) {
+        taiga::session.setMainWindowTrayNoticeShown(true);
+        trayIcon_->showMessage(tr("Taiga is still running"),
+                               tr("Taiga keeps detecting what you watch in the background. "
+                                  "To quit, use Exit from the tray menu."));
+      }
+      return;
+    }
+    QMetaObject::invokeMethod(qApp, &QApplication::quit, Qt::QueuedConnection);
+  }
+
   event->accept();
 }
 
@@ -442,11 +478,11 @@ void MainWindow::addNewFolder() {
 }
 
 void MainWindow::navigateTo(MainWindowPage page) {
-  m_navigationController->navigateTo(page);
+  navigationController_->navigateTo(page);
 }
 
 void MainWindow::navigateToListStatus(anime::list::Status status) {
-  m_navigationController->navigateToListStatus(status);
+  navigationController_->navigateToListStatus(status);
 }
 
 void MainWindow::updateTitle() {
@@ -460,8 +496,14 @@ void MainWindow::updateTitle() {
 }
 
 void MainWindow::displayWindow() {
+  show();
   setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+  raise();
   activateWindow();
+}
+
+bool MainWindow::canHideToTray() const {
+  return trayIcon_ && trayIcon_->isAvailable();
 }
 
 void MainWindow::about() {
@@ -483,13 +525,13 @@ void MainWindow::synchronize() {
   const auto text = sync::willAuthenticate() ? tr("Authenticating with %1...").arg(serviceName)
                                              : tr("Synchronizing with %1...").arg(serviceName);
 
-  m_statusBarController->showMessage({
+  statusBarController_->showMessage({
       .source = StatusBarController::Source::Sync,
       .text = text,
   });
 
   if (!sync::synchronize()) {
-    m_statusBarController->clearMessage(StatusBarController::Source::Sync);
+    statusBarController_->clearMessage(StatusBarController::Source::Sync);
     setEnabled(true);
   }
 }
