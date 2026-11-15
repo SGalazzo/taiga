@@ -33,15 +33,15 @@ class LibraryWidget final : public PageWidget {
 
 public:
   LibraryWidget(QWidget* parent);
-  ~LibraryWidget() = default;
 
 private:
   bool eventFilter(QObject* watched, QEvent* event) override;
+  void refreshFolders();
   void showContextMenu() const;
 
-  LibraryModel* m_model = nullptr;
-  ComboBox* m_comboRoot = nullptr;
-  QTreeView* m_view = nullptr;
+  LibraryModel* model_ = nullptr;
+  ComboBox* comboRoot_ = nullptr;
+  QTreeView* view_ = nullptr;
 };
 
 }  // namespace gui

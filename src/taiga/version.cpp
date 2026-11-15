@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,13 +24,16 @@
 namespace taiga {
 
 const semaver::Version& version() {
+  // clang-format off
   static const semaver::Version version(
       TAIGA_VERSION_MAJOR,
       TAIGA_VERSION_MINOR,
       TAIGA_VERSION_PATCH,
       TAIGA_VERSION_PRE,
       TAIGA_VERSION_BUILD > 0 ? STRINGIZE(TAIGA_VERSION_BUILD) : ""
-    );
+  );
+  // clang-format on
+
   return version;
 }
 

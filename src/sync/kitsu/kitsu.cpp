@@ -56,10 +56,6 @@ Service::Service() : sync::Service{ServiceId::Kitsu} {
   auto headers = api_.commonHeaders();
   headers.append(QHttpHeaders::WellKnownHeader::Accept, kJsonApiMediaType);
   api_.setCommonHeaders(headers);
-
-  if (const auto token = taiga::accounts.kitsuAccessToken(); !token.empty()) {
-    api_.setBearerToken(QByteArray::fromStdString(token));
-  }
 }
 
 Service* Service::instance() {
@@ -103,22 +99,22 @@ void Service::fetchAnime(const int id) {
       return;
     }
 
-    anime::db.updateItem(*item);
+    anime::db()->updateItem(*item);
   };
 
-  manager_.get(api_.createRequest(u"/anime/%1"_s.arg(id), query), this, callback);
+  manager_.get(createRequest(u"/anime/%1"_s.arg(id), query), this, callback);
 }
 
 void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
   // Library entries are filtered by numeric user ID rather than username, so it must be
   // resolved first.
-  if (taiga::accounts.kitsuUserId().empty()) {
+  if (taiga::accounts()->kitsuUserId().empty()) {
     resolveUser([this, offset, fetchedIds] { fetchListEntries(offset, fetchedIds); });
     return;
   }
 
   const QUrlQuery query{{
-      {"filter[user_id]", QString::fromStdString(taiga::accounts.kitsuUserId())},
+      {"filter[user_id]", QString::fromStdString(taiga::accounts()->kitsuUserId())},
       {"filter[kind]", "anime"},
       {"include", "anime"},
       {"page[offset]", QString::number(offset)},
@@ -151,7 +147,7 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
         items.append(*item);
       }
     }
-    anime::db.updateItems(items);
+    anime::db()->updateItems(items);
 
     QList<ListEntry> entries;
     for (const auto& value : root["data"].toArray()) {
@@ -162,7 +158,7 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
         fetchedIds.insert(animeId);
       }
     }
-    anime::db.updateEntries(entries);
+    anime::db()->updateEntries(entries);
 
     if (const auto nextOffset = pagingOffset(root["links"].toObject(), u"next"_s)) {
       fetchListEntries(*nextOffset, fetchedIds);
@@ -172,7 +168,7 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
     }
   };
 
-  manager_.get(api_.createRequest(u"/library-entries"_s, query), this, callback);
+  manager_.get(createRequest(u"/library-entries"_s, query), this, callback);
 }
 
 void Service::search(const SearchParams& params, const int offset) {
@@ -220,7 +216,7 @@ void Service::search(const SearchParams& params, const int offset) {
     QList<int> ids;
     for (const auto& value : root["data"].toArray()) {
       if (const auto item = parseAnime(value)) {
-        anime::db.updateItem(*item);
+        anime::db()->updateItem(*item);
         ids.append(item->id);
       }
     }
@@ -236,19 +232,19 @@ void Service::search(const SearchParams& params, const int offset) {
     }
   };
 
-  manager_.get(api_.createRequest(u"/anime"_s, query), this, callback);
+  manager_.get(createRequest(u"/anime"_s, query), this, callback);
 }
 
 void Service::addListEntry(const int id, const anime::list::Fields dirty) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
   if (!listEntry) return;
 
   const QUrlQuery query{{"fields[libraryEntries]", libraryEntryFields()}};
-  auto request = api_.createRequest(u"/library-entries"_s, query);
+  auto request = createRequest(u"/library-entries"_s, query);
   request.setHeader(QNetworkRequest::ContentTypeHeader, kJsonApiMediaType);
 
-  const auto body = buildLibraryEntryObject(*listEntry, dirty,
-                                            QString::fromStdString(taiga::accounts.kitsuUserId()));
+  const auto body = buildLibraryEntryObject(
+      *listEntry, dirty, QString::fromStdString(taiga::accounts()->kitsuUserId()));
 
   const auto callback = [this, id, dirty](QRestReply& reply) {
     const auto json = reply.readJson();
@@ -261,7 +257,7 @@ void Service::addListEntry(const int id, const anime::list::Fields dirty) {
         return value["detail"].toString().contains(u"has already been taken"_s);
       });
       if (duplicate) {
-        sync::queue.complete(true);
+        sync::queue()->complete(true);
         return;
       }
     }
@@ -269,15 +265,15 @@ void Service::addListEntry(const int id, const anime::list::Fields dirty) {
     if (isError(reply)) {
       if (retryOnTokenExpiry(reply, [this, id, dirty] { addListEntry(id, dirty); })) return;
       handleError(*this, reply, json);
-      sync::queue.complete(false, "Failed to add list entry.");
+      sync::queue()->complete(false, "Failed to add list entry.");
       return;
     }
 
     if (const auto entry =
             json ? parseListEntry(json->object()["data"].toObject(), id) : std::nullopt) {
-      sync::queue.complete(*entry);
+      sync::queue()->complete(*entry);
     } else {
-      sync::queue.complete(true);
+      sync::queue()->complete(true);
     }
   };
 
@@ -285,31 +281,31 @@ void Service::addListEntry(const int id, const anime::list::Fields dirty) {
 }
 
 void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
   if (!listEntry) return;
 
   const QUrlQuery query{{"fields[libraryEntries]", libraryEntryFields()}};
-  auto request = api_.createRequest(u"/library-entries/%1"_s.arg(listEntry->id), query);
+  auto request = createRequest(u"/library-entries/%1"_s.arg(listEntry->id), query);
   request.setHeader(QNetworkRequest::ContentTypeHeader, kJsonApiMediaType);
 
-  const auto body = buildLibraryEntryObject(*listEntry, dirty,
-                                            QString::fromStdString(taiga::accounts.kitsuUserId()));
+  const auto body = buildLibraryEntryObject(
+      *listEntry, dirty, QString::fromStdString(taiga::accounts()->kitsuUserId()));
 
   const auto callback = [this, id, dirty](QRestReply& reply) {
     if (isError(reply)) {
       if (retryOnTokenExpiry(reply, [this, id, dirty] { updateListEntry(id, dirty); })) return;
       handleError(*this, reply,
                   reply.httpStatus() == 404 ? u"Anime list entry does not exist."_s : QString{});
-      sync::queue.complete(false, "Failed to update list entry.");
+      sync::queue()->complete(false, "Failed to update list entry.");
       return;
     }
 
     const auto json = reply.readJson();
     if (const auto entry =
             json ? parseListEntry(json->object()["data"].toObject(), id) : std::nullopt) {
-      sync::queue.complete(*entry);
+      sync::queue()->complete(*entry);
     } else {
-      sync::queue.complete(true);
+      sync::queue()->complete(true);
     }
   };
 
@@ -317,21 +313,21 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
 }
 
 void Service::deleteListEntry(const int id) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
   if (!listEntry) return;
 
   const auto callback = [this, id](QRestReply& reply) {
     if (isError(reply) && reply.httpStatus() != 404) {
       if (retryOnTokenExpiry(reply, [this, id] { deleteListEntry(id); })) return;
       handleError(*this, reply);
-      sync::queue.complete(false, "Failed to delete list entry.");
+      sync::queue()->complete(false, "Failed to delete list entry.");
       return;
     }
 
-    sync::queue.complete(true);
+    sync::queue()->complete(true);
   };
 
-  manager_.deleteResource(api_.createRequest(u"/library-entries/%1"_s.arg(listEntry->id)), this,
+  manager_.deleteResource(createRequest(u"/library-entries/%1"_s.arg(listEntry->id)), this,
                           callback);
 }
 

@@ -46,7 +46,6 @@ class MediaDialog final : public QDialog {
 
 public:
   MediaDialog(QWidget* parent);
-  ~MediaDialog() = default;
 
   static void show(QWidget* parent, MediaDialogPage page, const Anime& anime);
 
@@ -70,9 +69,9 @@ private:
 
   Ui::MediaDialog* ui_ = nullptr;
 
-  Anime m_anime;
-  std::optional<ListEntry> m_entry;
-  anime::Settings m_settings;
+  Anime anime_;
+  std::optional<ListEntry> entry_;
+  anime::Settings settings_;
 };
 
 }  // namespace gui

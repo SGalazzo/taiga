@@ -45,11 +45,13 @@ bool isStreamingSiteUrl(std::string_view url, const std::vector<std::string>& si
 
 bool isPrivateBrowserWindow(std::string_view title) {
   static constexpr std::string_view markers[] = {
-      "(Incognito)", "(Private)", "InPrivate", "Private Browsing",
+      "(Incognito)",
+      "(Private)",
+      "InPrivate",
+      "Private Browsing",
   };
-  return std::ranges::any_of(markers, [title](std::string_view marker) {
-    return title.contains(marker);
-  });
+  return std::ranges::any_of(markers,
+                             [title](std::string_view marker) { return title.contains(marker); });
 }
 
 }  // namespace track::media

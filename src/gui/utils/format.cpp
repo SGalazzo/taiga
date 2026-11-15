@@ -33,15 +33,23 @@
 
 namespace gui {
 
-QString formatNumber(const int value, QString placeholder) {
+namespace {
+
+class Format {
+  Q_DECLARE_TR_FUNCTIONS(gui::Format)
+};
+
+}  // namespace
+
+QString formatNumber(const int value, const QString& placeholder) {
   return value > 0 ? QString::number(value) : placeholder;
 }
 
-QString formatEpisodeLength(const int minutes, QString placeholder) {
+QString formatEpisodeLength(const int minutes, const QString& placeholder) {
   return minutes > 0 ? u"%1m"_s.arg(minutes) : placeholder;
 }
 
-QString formatEpisodeNumbers(const std::vector<std::string>& numbers, QString placeholder) {
+QString formatEpisodeNumbers(const std::vector<std::string>& numbers, const QString& placeholder) {
   if (numbers.empty()) return placeholder;
 
   // Strip leading zeros (e.g. "01" -> "1")
@@ -63,27 +71,27 @@ QString formatScore(const double value) {
   return u"%1%"_s.arg(value * 10.0, 0, 'g', 4);
 }
 
-QString formatDate(const base::Date& date, QString placeholder) {
+QString formatDate(const base::Date& date, const QString& placeholder) {
   return date.ok() ? formatDate(QDate(date), placeholder) : placeholder;
 }
 
-QString formatDate(const QDate date, QString placeholder) {
+QString formatDate(const QDate date, const QString& placeholder) {
   return date.isValid() ? QDate(date).toString(Qt::RFC2822Date) : placeholder;
 }
 
-QString formatFuzzyDate(const base::FuzzyDate& fuzzyDate, QString placeholder) {
+QString formatFuzzyDate(const base::FuzzyDate& fuzzyDate, const QString& placeholder) {
   const QDate date(fuzzyDate.year(), fuzzyDate.month(), fuzzyDate.day());
   return fuzzyDate ? date.toString(Qt::RFC2822Date) : placeholder;
 }
 
 QString formatFuzzyDateRange(const base::FuzzyDate& from, const base::FuzzyDate& to,
-                             QString placeholder) {
+                             const QString& placeholder) {
   if (from == to) return formatFuzzyDate(from, placeholder);
   return u"%1 to %2"_s.arg(formatFuzzyDate(from, placeholder))
       .arg(formatFuzzyDate(to, placeholder));
 }
 
-QString formatAsRelativeTime(const qint64 time, QString placeholder) {
+QString formatAsRelativeTime(const qint64 time, const QString& placeholder) {
   if (!time) return placeholder;
 
   const QDateTime datetime = QDateTime::fromSecsSinceEpoch(time);
@@ -94,27 +102,27 @@ QString formatAsRelativeTime(const qint64 time, QString placeholder) {
   const QString str = [&duration]() {
     // clang-format off
     if (duration.seconds() < 90) {
-      return QCoreApplication::translate("gui/utils/format", "a moment");
+      return Format::tr("a moment");
     }
     if (duration.minutes() < 45) {
       const auto n = std::lround(duration.minutes());
-      return QCoreApplication::translate("gui/utils/format", "%n minute(s)", nullptr, n);
+      return Format::tr("%n minute(s)", nullptr, n);
     }
     if (duration.hours() < 22) {
       const auto n = std::lround(duration.hours());
-      return QCoreApplication::translate("gui/utils/format", "%n hour(s)", nullptr, n);
+      return Format::tr("%n hour(s)", nullptr, n);
     }
     if (duration.days() < 25) {
       const auto n = std::lround(duration.days());
-      return QCoreApplication::translate("gui/utils/format", "%n day(s)", nullptr, n);
+      return Format::tr("%n day(s)", nullptr, n);
     }
     if (duration.days() < 345) {
       const auto n = std::lround(duration.months());
-      return QCoreApplication::translate("gui/utils/format", "%n month(s)", nullptr, n);
+      return Format::tr("%n month(s)", nullptr, n);
     }
     {
       const auto n = std::lround(duration.years());
-      return QCoreApplication::translate("gui/utils/format", "%n year(s)", nullptr, n);
+      return Format::tr("%n year(s)", nullptr, n);
     }
     // clang-format on
   }();
@@ -150,9 +158,9 @@ QString formatTransferProgress(const qint64 current, const qint64 total) {
   return QLocale::system().formattedDataSize(current, 1);  // e.g. "1.2 MiB"
 }
 
-QString formatSeason(const anime::Season season, QString placeholder) {
-  if (!season.has_name() && !season.has_year()) return placeholder;
-  if (!season.has_name()) {
+QString formatSeason(const anime::Season season, const QString& placeholder) {
+  if (!season.hasName() && !season.hasYear()) return placeholder;
+  if (!season.hasName()) {
     return u"%1"_s.arg(static_cast<int>(season.year));
   } else {
     return u"%1 %2"_s.arg(formatSeasonName(season.name)).arg(static_cast<int>(season.year));

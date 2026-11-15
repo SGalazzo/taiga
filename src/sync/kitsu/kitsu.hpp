@@ -18,7 +18,9 @@
 
 #pragma once
 
+#include <QNetworkRequest>
 #include <QSet>
+#include <QUrlQuery>
 #include <functional>
 
 #include "sync/service.hpp"
@@ -35,23 +37,25 @@ constexpr auto kApiUrl = "https://kitsu.app/api/edge";
 constexpr auto kTokenUrl = "https://kitsu.app/api/oauth/token";
 constexpr auto kJsonApiMediaType = "application/vnd.api+json";
 
-enum ListPrivacy {
-  kPrivate = 1,
-  kPublic,
+enum class ListPrivacy {
+  Private = 1,
+  Public,
 };
 
-enum ListStatus {
-  kCurrentlyWatching = 1,
-  kPlanToWatch,
-  kCompleted,
-  kOnHold,
-  kDropped,
+enum class ListStatus {
+  CurrentlyWatching = 1,
+  PlanToWatch,
+  Completed,
+  OnHold,
+  Dropped,
 };
 
 class Service final : public sync::Service {
+  Q_OBJECT
+  Q_DISABLE_COPY_MOVE(Service)
+
 public:
   Service();
-  ~Service() = default;
 
   static Service* instance();
 
@@ -64,9 +68,10 @@ public:
   void deleteListEntry(const int id);
 
 private:
-  void resolveUser(std::function<void()> onSuccess = nullptr);
-  void refreshAccessToken(std::function<void()> onSuccess);
-  bool retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry);
+  QNetworkRequest createRequest(const QString& path, const QUrlQuery& query = {});
+  void resolveUser(const std::function<void()>& onSuccess = nullptr);
+  void refreshAccessToken(const std::function<void()>& onSuccess);
+  bool retryOnTokenExpiry(QRestReply& reply, const std::function<void()>& retry);
 };
 
 }  // namespace sync::kitsu

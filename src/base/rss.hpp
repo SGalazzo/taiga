@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ struct Item {
   };
 
   struct Guid {
-    bool is_permalink = true;
+    bool isPermalink = true;
     std::string value;
   };
 
@@ -63,10 +63,10 @@ struct Item {
   std::string comments;     // URL of a page for comments relating to the item.
   Enclosure enclosure;      // Describes a media object that is attached to the item.
   Guid guid;                // A string that uniquely identifies the item.
-  std::string pub_date;     // Indicates when the item was published.
+  std::string pubDate;      // Indicates when the item was published.
   Source source;            // The RSS channel that the item came from.
 
-  std::unordered_map<std::string, std::string> namespace_elements;
+  std::unordered_map<std::string, std::string> namespaceElements;
 };
 
 struct Feed {

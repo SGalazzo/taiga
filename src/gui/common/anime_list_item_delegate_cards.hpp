@@ -32,7 +32,6 @@ class ListItemDelegateCards final : public QStyledItemDelegate {
 
 public:
   ListItemDelegateCards(QObject* parent);
-  ~ListItemDelegateCards() = default;
 
   void paint(QPainter* painter, const QStyleOptionViewItem& option,
              const QModelIndex& index) const override;
@@ -44,12 +43,13 @@ protected:
 
 private:
   QSize itemSize() const;
+  void paintSelectionBorder(QPainter* painter, const QStyleOptionViewItem& option) const;
   void advanceSpinner();
 
-  QPixmap m_spinnerPixmap;
-  qreal m_angle = 0.0;
-  mutable QTimer m_timerSpinner;
-  mutable QSet<QPersistentModelIndex> m_loadingIndices;
+  QPixmap spinnerPixmap_;
+  qreal angle_ = 0.0;
+  mutable QTimer timerSpinner_;
+  mutable QSet<QPersistentModelIndex> loadingIndices_;
 };
 
 }  // namespace gui

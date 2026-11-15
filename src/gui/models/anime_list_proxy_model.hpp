@@ -44,7 +44,6 @@ class AnimeListProxyModel final : public QSortFilterProxyModel {
 
 public:
   AnimeListProxyModel(QObject* parent);
-  ~AnimeListProxyModel() = default;
 
   const AnimeListProxyModelFilter& filters() const;
   void setFilters(const AnimeListProxyModelFilter& filters);
@@ -55,6 +54,7 @@ public:
   void setStatusFilter(std::optional<int> status);
   void setListStatusFilter(AnimeListStatusFilter filter);
   void setTextFilter(const QString& text);
+  void setNsfwHidden(bool hidden);
 
   int secondarySortColumn() const;
   Qt::SortOrder secondarySortOrder() const;
@@ -69,9 +69,10 @@ protected:
 private:
   std::partial_ordering compare(const QModelIndex& lhs, const QModelIndex& rhs, int column) const;
 
-  AnimeListProxyModelFilter m_filter;
-  int m_secondarySortColumn = -1;
-  Qt::SortOrder m_secondarySortOrder = Qt::AscendingOrder;
+  AnimeListProxyModelFilter filter_;
+  bool nsfwHidden_ = false;
+  int secondarySortColumn_ = -1;
+  Qt::SortOrder secondarySortOrder_ = Qt::AscendingOrder;
 };
 
 }  // namespace gui

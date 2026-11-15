@@ -32,9 +32,19 @@
 
 namespace sync::kitsu {
 
-bool Service::retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry) {
+QNetworkRequest Service::createRequest(const QString& path, const QUrlQuery& query) {
+  // Credentials can change at any time, so the stored access token is the source of truth
+  if (const auto token = taiga::accounts()->kitsuAccessToken(); !token.empty()) {
+    api_.setBearerToken(QByteArray::fromStdString(token));
+  } else {
+    api_.clearBearerToken();
+  }
+  return api_.createRequest(path, query);
+}
+
+bool Service::retryOnTokenExpiry(QRestReply& reply, const std::function<void()>& retry) {
   if (!isTokenExpired(reply)) return false;
-  refreshAccessToken(std::move(retry));
+  refreshAccessToken(retry);
   return true;
 }
 
@@ -42,15 +52,15 @@ void Service::authenticateUser() {
   QNetworkRequest request{QUrl{kTokenUrl}};
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
-  auto username = taiga::accounts.kitsuEmail();
-  if (username.empty()) username = taiga::accounts.kitsuUsername();
+  auto username = taiga::accounts()->kitsuEmail();
+  if (username.empty()) username = taiga::accounts()->kitsuUsername();
 
   // Resource Owner Password Credentials Grant
   // https://tools.ietf.org/html/rfc6749#section-4.3
   const taiga::NameValuePairs body{
       {"grant_type", "password"},
       {"username", QString::fromStdString(username)},
-      {"password", QString::fromStdString(taiga::accounts.kitsuPassword())},
+      {"password", QString::fromStdString(taiga::accounts()->kitsuPassword())},
       {"client_id", kClientId},
       {"client_secret", kClientSecret},
   };
@@ -71,9 +81,8 @@ void Service::authenticateUser() {
 
     const auto root = json->object();
     const auto accessToken = root["access_token"].toString();
-    taiga::accounts.setKitsuAccessToken(accessToken.toStdString());
-    taiga::accounts.setKitsuRefreshToken(root["refresh_token"].toString().toStdString());
-    api_.setBearerToken(accessToken.toUtf8());
+    taiga::accounts()->setKitsuAccessToken(accessToken.toStdString());
+    taiga::accounts()->setKitsuRefreshToken(root["refresh_token"].toString().toStdString());
 
     // Kitsu's token response doesn't include user information, so we need to make an additional
     // request to resolve it.
@@ -83,8 +92,8 @@ void Service::authenticateUser() {
   manager_.post(request, taiga::formUrlEncode(body), this, callback);
 }
 
-void Service::refreshAccessToken(std::function<void()> onSuccess) {
-  const auto refreshToken = taiga::accounts.kitsuRefreshToken();
+void Service::refreshAccessToken(const std::function<void()>& onSuccess) {
+  const auto refreshToken = taiga::accounts()->kitsuRefreshToken();
 
   if (refreshToken.empty()) {
     emit errorOccurred("Refresh token is unavailable.");
@@ -118,9 +127,8 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
 
     const auto root = json->object();
     const auto accessToken = root["access_token"].toString();
-    taiga::accounts.setKitsuAccessToken(accessToken.toStdString());
-    taiga::accounts.setKitsuRefreshToken(root["refresh_token"].toString().toStdString());
-    api_.setBearerToken(accessToken.toUtf8());
+    taiga::accounts()->setKitsuAccessToken(accessToken.toStdString());
+    taiga::accounts()->setKitsuRefreshToken(root["refresh_token"].toString().toStdString());
 
     if (onSuccess) onSuccess();
   };
@@ -130,13 +138,13 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void Service::resolveUser(std::function<void()> onSuccess) {
-  const bool authenticated = !taiga::accounts.kitsuAccessToken().empty();
+void Service::resolveUser(const std::function<void()>& onSuccess) {
+  const bool authenticated = !taiga::accounts()->kitsuAccessToken().empty();
 
-  QUrlQuery query =
-      authenticated
-          ? QUrlQuery{{u"filter[self]"_s, u"true"_s}}
-          : QUrlQuery{{u"filter[slug]"_s, QString::fromStdString(taiga::accounts.kitsuUsername())}};
+  QUrlQuery query = authenticated
+                        ? QUrlQuery{{u"filter[self]"_s, u"true"_s}}
+                        : QUrlQuery{{u"filter[slug]"_s,
+                                     QString::fromStdString(taiga::accounts()->kitsuUsername())}};
   query.addQueryItem(u"fields[users]"_s, userFields());
 
   const auto callback = [this, authenticated, onSuccess](QRestReply& reply) {
@@ -159,20 +167,20 @@ void Service::resolveUser(std::function<void()> onSuccess) {
     const auto user = data.first().toObject();
     const auto attributes = user["attributes"].toObject();
 
-    taiga::accounts.setKitsuUserId(user["id"].toString().toStdString());
-    taiga::accounts.setKitsuDisplayName(attributes["name"].toString().toStdString());
-    taiga::accounts.setKitsuUsername(attributes["slug"].toString().toStdString());
+    taiga::accounts()->setKitsuUserId(user["id"].toString().toStdString());
+    taiga::accounts()->setKitsuDisplayName(attributes["name"].toString().toStdString());
+    taiga::accounts()->setKitsuUsername(attributes["slug"].toString().toStdString());
 
     if (authenticated) {
-      taiga::accounts.setKitsuEmail(attributes["email"].toString().toStdString());
-      taiga::accounts.setKitsuRatingSystem(attributes["ratingSystem"].toString().toStdString());
+      taiga::accounts()->setKitsuEmail(attributes["email"].toString().toStdString());
+      taiga::accounts()->setKitsuRatingSystem(attributes["ratingSystem"].toString().toStdString());
       emit authenticationCompleted(true);
     }
 
     if (onSuccess) onSuccess();
   };
 
-  manager_.get(api_.createRequest(u"/users"_s, query), this, callback);
+  manager_.get(createRequest(u"/users"_s, query), this, callback);
 }
 
 }  // namespace sync::kitsu

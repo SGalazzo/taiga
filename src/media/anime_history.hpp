@@ -26,7 +26,7 @@ namespace anime {
 
 struct HistoryItem {
   int id = 0;
-  int anime_id = 0;
+  int animeId = 0;
   int episode = 0;
   std::time_t time = 0;
 };
@@ -36,8 +36,7 @@ class History final : public QObject {
   Q_DISABLE_COPY_MOVE(History)
 
 public:
-  History();
-  ~History() = default;
+  explicit History(QObject* parent);
 
   void init();
 
@@ -64,6 +63,6 @@ private:
   QList<HistoryItem> items_;
 };
 
-inline History history;
+History* history();
 
 }  // namespace anime

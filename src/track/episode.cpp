@@ -26,19 +26,19 @@
 
 namespace track {
 
-Episode::Episode() : anime_id_{anime::kUnknownId} {}
+Episode::Episode() : animeId_{anime::kUnknownId} {}
 
 auto Episode::find(const anitomy::ElementKind kind) const {
-  const auto is_kind = [kind](const anitomy::Element& element) { return element.kind == kind; };
-  return std::ranges::find_if(elements_, is_kind);
+  const auto isKind = [kind](const anitomy::Element& element) { return element.kind == kind; };
+  return std::ranges::find_if(elements_, isKind);
 }
 
 int Episode::animeId() const {
-  return anime_id_;
+  return animeId_;
 }
 
 void Episode::setAnimeId(int id) {
-  anime_id_ = id;
+  animeId_ = id;
 }
 
 std::optional<std::pair<int, int>> Episode::episodeNumberRange() const {
@@ -70,17 +70,18 @@ bool Episode::contains(const anitomy::ElementKind kind) const {
   return find(kind) != elements_.end();
 }
 
-std::string Episode::element(const anitomy::ElementKind kind, const std::string placeholder) const {
+std::string Episode::element(const anitomy::ElementKind kind,
+                             const std::string& placeholder) const {
   const auto it = find(kind);
   if (it != elements_.end()) return it->value;
   return placeholder;
 };
 
 std::vector<std::string> Episode::elements(const anitomy::ElementKind kind) const {
-  const auto is_kind = [kind](const anitomy::Element& element) { return element.kind == kind; };
-  const auto to_value = [](const anitomy::Element& element) { return element.value; };
+  const auto isKind = [kind](const anitomy::Element& element) { return element.kind == kind; };
+  const auto toValue = [](const anitomy::Element& element) { return element.value; };
 
-  return elements_ | std::views::filter(is_kind) | std::views::transform(to_value) |
+  return elements_ | std::views::filter(isKind) | std::views::transform(toValue) |
          std::ranges::to<std::vector>();
 }
 
@@ -89,8 +90,8 @@ void Episode::addElement(const anitomy::ElementKind kind, const std::string& val
 }
 
 void Episode::removeElements(const anitomy::ElementKind kind) {
-  const auto is_kind = [kind](const anitomy::Element& element) { return element.kind == kind; };
-  std::erase_if(elements_, is_kind);
+  const auto isKind = [kind](const anitomy::Element& element) { return element.kind == kind; };
+  std::erase_if(elements_, isKind);
 }
 
 }  // namespace track

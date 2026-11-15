@@ -44,37 +44,37 @@ namespace gui {
 
 ListViewBase::ListViewBase(QWidget* parent, QAbstractItemView* view, AnimeListModel* model,
                            AnimeListProxyModel* proxyModel, AnimeListContext context)
-    : QObject(parent), m_view(view), m_model(model), m_proxyModel(proxyModel), m_context(context) {
-  m_view->setContextMenuPolicy(Qt::CustomContextMenu);
-  m_view->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    : QObject(parent), model_(model), proxyModel_(proxyModel), view_(view), context_(context) {
+  view_->setContextMenuPolicy(Qt::CustomContextMenu);
+  view_->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 
-  m_proxyModel->setSourceModel(m_model);
-  m_view->setModel(m_proxyModel);
+  proxyModel_->setSourceModel(model_);
+  view_->setModel(proxyModel_);
 
   connect(mainWindow()->searchBox(), &QLineEdit::textChanged, this, &ListViewBase::filterByText);
 
-  connect(m_view, &QAbstractItemView::doubleClicked, this, &ListViewBase::showMediaDialog);
+  connect(view_, &QAbstractItemView::doubleClicked, this, &ListViewBase::showMediaDialog);
 
-  connect(m_view, &QWidget::customContextMenuRequested, this, &ListViewBase::showMediaMenu);
+  connect(view_, &QWidget::customContextMenuRequested, this, &ListViewBase::showMediaMenu);
 
-  connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+  connect(view_->selectionModel(), &QItemSelectionModel::selectionChanged, this,
           &ListViewBase::updateSelectionStatus);
 }
 
 void ListViewBase::filterByText(const QString& text) {
-  m_proxyModel->setTextFilter(text);
+  proxyModel_->setTextFilter(text);
 }
 
 void ListViewBase::openAnimePage(const QModelIndex& index) {
-  const auto mappedIndex = m_proxyModel->mapToSource(index);
-  const auto anime = m_model->getAnime(mappedIndex);
+  const auto mappedIndex = proxyModel_->mapToSource(index);
+  const auto anime = model_->getAnime(mappedIndex);
   if (!anime) return;
   QDesktopServices::openUrl(QUrl{sync::animePageUrl(anime->id)});
 }
 
 void ListViewBase::playNextEpisode(const QModelIndex& index) {
-  const auto mappedIndex = m_proxyModel->mapToSource(index);
-  const auto item = m_model->getAnime(mappedIndex);
+  const auto mappedIndex = proxyModel_->mapToSource(index);
+  const auto item = model_->getAnime(mappedIndex);
   if (!item) return;
 
   const auto number = track::nextEpisodeNumber(item->id);
@@ -97,8 +97,8 @@ void ListViewBase::playNextEpisode(const QModelIndex& index) {
 }
 
 void ListViewBase::showMediaDialog(const QModelIndex& index) {
-  const auto mappedIndex = m_proxyModel->mapToSource(index);
-  const auto anime = m_model->getAnime(mappedIndex);
+  const auto mappedIndex = proxyModel_->mapToSource(index);
+  const auto anime = model_->getAnime(mappedIndex);
   if (!anime) return;
   MediaDialog::show(mainWindow(), MediaDialogPage::Details, *anime);
 }
@@ -111,48 +111,48 @@ void ListViewBase::showMediaMenu() {
   QMap<int, ListEntry> entries;
 
   for (auto selectedIndex : indexes) {
-    const auto index = m_proxyModel->mapToSource(selectedIndex);
-    if (const auto item = m_model->getAnime(index)) {
+    const auto index = proxyModel_->mapToSource(selectedIndex);
+    if (const auto item = model_->getAnime(index)) {
       items.push_back(*item);
-      if (const auto entry = m_model->getListEntry(index)) {
+      if (const auto entry = model_->getListEntry(index)) {
         entries[item->id] = *entry;
       }
     }
   }
 
-  auto* menu = new MediaMenu(m_view, items, entries, m_view->selectionModel(), m_context);
+  auto* menu = new MediaMenu(view_, items, entries, view_->selectionModel(), context_);
   menu->popup();
 }
 
 void ListViewBase::updateSelectionStatus(const QItemSelection&, const QItemSelection&) {
-  const auto n_selected = selectedIndexes().size();
+  const auto nSelected = selectedIndexes().size();
 
-  if (!n_selected) {
+  if (!nSelected) {
     mainWindow()->statusBarController()->clearMessage(StatusBarController::Source::Selection);
     return;
   }
 
-  int n_episodes = 0;
-  int n_score = 0;
-  double total_score = 0.0;
-  double average_score = 0.0;
+  int nEpisodes = 0;
+  int nScore = 0;
+  double totalScore = 0.0;
+  double averageScore = 0.0;
 
   for (const auto index : selectedIndexes()) {
-    const auto anime = m_model->getAnime(m_proxyModel->mapToSource(index));
+    const auto anime = model_->getAnime(proxyModel_->mapToSource(index));
     if (!anime) continue;
-    if (anime->episode_count > 0) n_episodes += anime->episode_count;
+    if (anime->episodeCount > 0) nEpisodes += anime->episodeCount;
     if (anime->score) {
-      ++n_score;
-      total_score += anime->score;
+      ++nScore;
+      totalScore += anime->score;
     }
   }
 
-  if (n_score) average_score = total_score / n_score;
+  if (nScore) averageScore = totalScore / nScore;
 
   const QStringList parts{
-      tr("%n item(s) selected", nullptr, n_selected),
-      tr("%n episode(s)", nullptr, n_episodes),
-      tr("%1 average").arg(formatScore(average_score)),
+      tr("%n item(s) selected", nullptr, nSelected),
+      tr("%n episode(s)", nullptr, nEpisodes),
+      tr("%1 average").arg(formatScore(averageScore)),
   };
 
   mainWindow()->statusBarController()->showMessage({
@@ -163,8 +163,8 @@ void ListViewBase::updateSelectionStatus(const QItemSelection&, const QItemSelec
 }
 
 QModelIndexList ListViewBase::selectedIndexes() {
-  const auto model = m_view->selectionModel();
-  return model->selectedRows().size() ? model->selectedRows() : model->selectedIndexes();
+  const auto model = view_->selectionModel();
+  return !model->selectedRows().empty() ? model->selectedRows() : model->selectedIndexes();
 }
 
 }  // namespace gui

@@ -31,7 +31,7 @@ namespace anime {
 enum class SeasonName;
 enum class Status;
 enum class Type;
-}
+}  // namespace anime
 
 namespace anime::list {
 enum class Status;
@@ -46,7 +46,7 @@ namespace sync::anilist {
 QJsonObject fromFuzzyDate(const base::FuzzyDate& date);
 QString fromListStatus(const anime::list::Status value);
 float fromScore(float value);
-QString fromSearchParams(const SearchParams params);
+QString fromSearchParams(const SearchParams& params);
 QString fromSeasonName(const anime::SeasonName name);
 QString fromStatus(const anime::Status value);
 QString fromType(const anime::Type value);

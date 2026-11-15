@@ -37,7 +37,6 @@ class HistoryWidget final : public PageWidget {
 
 public:
   HistoryWidget(QWidget* parent);
-  ~HistoryWidget() = default;
 
 private:
   void initToolbar();
@@ -50,9 +49,9 @@ private:
 
   const anime::HistoryItem* getHistoryItem(const QModelIndex& index) const;
 
-  HistoryModel* m_model = nullptr;
-  HistoryProxyModel* m_proxyModel = nullptr;
-  QTreeView* m_view = nullptr;
+  HistoryModel* model_ = nullptr;
+  HistoryProxyModel* proxyModel_ = nullptr;
+  QTreeView* view_ = nullptr;
 };
 
 }  // namespace gui

@@ -39,28 +39,28 @@ SettingsPageStreaming::SettingsPageStreaming(Ui::SettingsDialog* ui, QDialog* di
 }
 
 void SettingsPageStreaming::load() {
-  ui_->streamingEnabledCheckBox->setChecked(taiga::settings.streamingMediaEnabled());
+  ui_->streamingEnabledCheckBox->setChecked(taiga::settings()->streamingDetectionEnabled());
   loadPlayerList(ui_->streamingBrowsersList, anisthesia::PlayerType::WebBrowser);
-  ui_->streamingSitesOnlyCheckBox->setChecked(taiga::settings.streamingSitesOnly());
+  ui_->streamingSitesOnlyCheckBox->setChecked(taiga::settings()->streamingSitesOnly());
 
   QStringList sites;
-  for (const auto& site : taiga::settings.streamingSites()) {
+  for (const auto& site : taiga::settings()->streamingSites()) {
     sites.append(QString::fromStdString(site));
   }
   ui_->streamingSitesEdit->setPlainText(sites.join(u'\n'));
 }
 
 void SettingsPageStreaming::apply() const {
-  taiga::settings.setStreamingMediaEnabled(ui_->streamingEnabledCheckBox->isChecked());
+  taiga::settings()->setStreamingDetectionEnabled(ui_->streamingEnabledCheckBox->isChecked());
   savePlayerList(ui_->streamingBrowsersList, anisthesia::PlayerType::WebBrowser);
   std::vector<std::string> sites;
   for (const auto& line : ui_->streamingSitesEdit->toPlainText().split(u'\n')) {
     if (const auto site = line.trimmed(); !site.isEmpty()) sites.push_back(site.toStdString());
   }
   // Limiting detection to no sites at all would turn it off, which is not what the option is for.
-  taiga::settings.setStreamingSitesOnly(ui_->streamingSitesOnlyCheckBox->isChecked() &&
-                                        !sites.empty());
-  taiga::settings.setStreamingSites(std::move(sites));
+  taiga::settings()->setStreamingSitesOnly(ui_->streamingSitesOnlyCheckBox->isChecked() &&
+                                           !sites.empty());
+  taiga::settings()->setStreamingSites(sites);
 }
 
 }  // namespace gui

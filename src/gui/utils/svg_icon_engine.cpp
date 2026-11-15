@@ -21,25 +21,24 @@
 #include <QGuiApplication>
 #include <QPainter>
 #include <QPalette>
+#include <utility>
 
 #include "base/string.hpp"
 
 namespace gui {
 
-SvgIconEngine::SvgIconEngine(const QString& iconName) : m_iconName(iconName) {}
-
-SvgIconEngine::~SvgIconEngine() {}
+SvgIconEngine::SvgIconEngine(QString iconName) : iconName_(std::move(iconName)) {}
 
 QString SvgIconEngine::key() const {
   return u"SvgIconEngine"_s;
 }
 
 QIconEngine* SvgIconEngine::clone() const {
-  return new SvgIconEngine(m_iconName);
+  return new SvgIconEngine(iconName_);
 }
 
 QString SvgIconEngine::iconName() {
-  return m_iconName;
+  return iconName_;
 }
 
 bool SvgIconEngine::isNull() {
@@ -56,7 +55,7 @@ QPixmap SvgIconEngine::scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::
 
   // Resolved on every call, so that icons follow palette changes (e.g. color scheme)
   const QColor color = [mode]() {
-    QPalette palette;
+    const QPalette palette;
     switch (mode) {
       default:
       case QIcon::Normal:
@@ -64,33 +63,34 @@ QPixmap SvgIconEngine::scaledPixmap(const QSize& size, QIcon::Mode mode, QIcon::
       case QIcon::Disabled:
         return palette.color(QPalette::Disabled, QPalette::Text);
       case QIcon::Active:
-        return palette.color(QPalette::Active, QPalette::Text);
+      // Item views select with a subtle tint rather than the highlight color (see main.qss), so
+      // selected icons keep the normal text color.
       case QIcon::Selected:
-        return palette.color(QPalette::Active, QPalette::HighlightedText);
+        return palette.color(QPalette::Active, QPalette::Text);
     }
   }();
 
-  if (cacheKey != m_cacheKey || color != m_color || size != m_size ||
-      m_pixmap.devicePixelRatio() != scale) {
+  if (cacheKey != cacheKey_ || color != color_ || size != size_ ||
+      pixmap_.devicePixelRatio() != scale) {
     const QRect rect({0, 0}, size);
 
-    m_cacheKey = cacheKey;
-    m_color = color;
-    m_size = size;
-    m_pixmap = QPixmap(size * scale);
-    m_pixmap.fill(Qt::transparent);
-    m_pixmap.setDevicePixelRatio(scale);
+    cacheKey_ = cacheKey;
+    color_ = color;
+    size_ = size;
+    pixmap_ = QPixmap(size * scale);
+    pixmap_.fill(Qt::transparent);
+    pixmap_.setDevicePixelRatio(scale);
 
-    QPainter painter(&m_pixmap);
+    QPainter painter(&pixmap_);
 
-    const auto icon = QIcon(u":/icons/%1.svg"_s.arg(m_iconName));
+    const auto icon = QIcon(u":/icons/%1.svg"_s.arg(iconName_));
 
     icon.paint(&painter, rect, Qt::AlignCenter);
     painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
     painter.fillRect(rect, color);
   }
 
-  return m_pixmap;
+  return pixmap_;
 }
 
 void SvgIconEngine::paint(QPainter* painter, const QRect& rect, QIcon::Mode mode,

@@ -28,7 +28,6 @@ class ClickableLabel : public QLabel {
 
 public:
   explicit ClickableLabel(QWidget* parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
-  ~ClickableLabel() = default;
 
   void setElidable(const bool elidable);
 
@@ -43,7 +42,7 @@ protected:
 private:
   QString elidedText() const;
 
-  bool m_elidable = false;
+  bool elidable_ = false;
 };
 
 }  // namespace gui

@@ -46,6 +46,14 @@ int rank(const QtMsgType type) {
   return 0;
 }
 
+// Known Qt warnings that aren't actionable.
+bool isIgnored(const QMessageLogContext& context, const QString& message) {
+  // On color scheme changes, Qt requests a new title bar color for every window, which fails for
+  // windows that don't have one (e.g. popups). The window simply keeps its frame.
+  return qstrcmp(context.category, "qt.qpa.window") == 0 &&
+         message.contains(u"setDarkBorderToWindow");
+}
+
 void writeToFile(const QString& text) {
   if (g_path.isEmpty()) return;
 
@@ -58,11 +66,12 @@ void writeToFile(const QString& text) {
 
 void messageHandler(const QtMsgType type, const QMessageLogContext& context,
                     const QString& message) {
-  QMutexLocker lock{&g_mutex};
+  const QMutexLocker lock{&g_mutex};
 
   // Cannot use QT_NO_DEBUG_OUTPUT since the threshold is a runtime choice
   // (i.e. `--debug` command line argument).
   if (rank(type) < rank(g_minType)) return;
+  if (isIgnored(context, message)) return;
 
   // Shorten the file path to a basename before formatting/forwarding.
   const auto fileInfo = QFileInfo{QString::fromUtf8(context.file ? context.file : "")};
