@@ -110,11 +110,13 @@ void ListItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
 QSize ListItemDelegate::sizeHint(const QStyleOptionViewItem& option,
                                  const QModelIndex& index) const {
-  if (index.isValid()) {
-    return QSize(0, 24);
-  }
+  auto size = QStyledItemDelegate::sizeHint(option, index);
 
-  return QStyledItemDelegate::sizeHint(option, index);
+  // Rows have a fixed height, but the width is still needed to fit a column to its contents (e.g.
+  // when its header divider is double-clicked).
+  if (index.isValid()) size.setHeight(24);
+
+  return size;
 }
 
 }  // namespace gui
