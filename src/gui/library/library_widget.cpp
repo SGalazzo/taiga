@@ -63,6 +63,7 @@ LibraryWidget::LibraryWidget(QWidget* parent)
 
     // More
     const auto actionMore = new QAction(theme()->getIcon("more_horiz"), tr("More"), this);
+    actionMore->setDisabled(true);  // placeholder
     toolbar_->addAction(actionMore);
   }
 
