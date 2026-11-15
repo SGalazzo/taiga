@@ -719,7 +719,7 @@ app.plex.tv
               <item>
                <widget class="QLabel" name="streamingSitesHintLabel">
                 <property name="text">
-                 <string>One address per line, without https://. * matches any part of a host name or path segment. Otherwise, only episodes of a known anime are detected in web browsers.</string>
+                 <string>One address per line, without https://. Use * to match any part of a host name or path segment. When this is off, only episodes of a known anime are detected in web browsers.</string>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
