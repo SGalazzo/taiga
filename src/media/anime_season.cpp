@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ namespace season {
 
 using Month = std::chrono::month;
 
-constexpr SeasonName from_month(const Month month) noexcept {
+constexpr SeasonName fromMonth(const Month month) noexcept {
   // clang-format off
   switch (static_cast<unsigned int>(month)) {
     default: return Unknown;
@@ -64,7 +64,7 @@ constexpr SeasonName prev(const SeasonName name) noexcept {
   // clang-format on
 }
 
-constexpr std::pair<Month, Month> to_months(const SeasonName name) noexcept {
+constexpr std::pair<Month, Month> toMonths(const SeasonName name) noexcept {
   using namespace std::chrono;
 
   // clang-format off
@@ -78,21 +78,21 @@ constexpr std::pair<Month, Month> to_months(const SeasonName name) noexcept {
   // clang-format on
 }
 
-std::pair<Date, Date> to_date_range(const Season& season) noexcept {
+std::pair<Date, Date> toDateRange(const Season& season) noexcept {
   if (!season) return {};
 
-  const auto months = season::to_months(season.name);
+  const auto months = season::toMonths(season.name);
 
-  const Date date_first{
+  const Date dateFirst{
       season.name == Winter ? season.year - std::chrono::years{1} : season.year,
       months.first,
       std::chrono::day{1},
   };
 
-  const Date date_last =
+  const Date dateLast =
       std::chrono::year_month_day_last{season.year, std::chrono::month_day_last(months.second)};
 
-  return {date_first, date_last};
+  return {dateFirst, dateLast};
 }
 
 }  // namespace season
@@ -105,7 +105,7 @@ Season::Season(const Date& date) : Season{FuzzyDate{date}} {}
 
 Season::Season(const FuzzyDate& date) {
   if (date.month()) {
-    name = season::from_month(std::chrono::month{date.month()});
+    name = season::fromMonth(std::chrono::month{date.month()});
   }
 
   if (date.year()) {
@@ -117,7 +117,7 @@ Season::Season(const FuzzyDate& date) {
 }
 
 Season::operator bool() const {
-  return has_name() && has_year();
+  return hasName() && hasYear();
 }
 
 Season& Season::operator++() {
@@ -133,28 +133,28 @@ Season& Season::operator--() {
 }
 
 std::strong_ordering Season::operator<=>(const Season& season) const {
-  using cmp = std::strong_ordering;
+  using Cmp = std::strong_ordering;
 
   if (year != season.year) {
-    if (!static_cast<int>(year)) return cmp::greater;
-    if (!static_cast<int>(season.year)) return cmp::less;
-    return year < season.year ? cmp::less : cmp::greater;
+    if (!static_cast<int>(year)) return Cmp::greater;
+    if (!static_cast<int>(season.year)) return Cmp::less;
+    return year < season.year ? Cmp::less : Cmp::greater;
   }
 
   if (name != season.name) {
-    if (name == Unknown) return cmp::greater;  // Unknown seasons are in the future
-    if (season.name == Unknown) return cmp::less;
-    return name < season.name ? cmp::less : cmp::greater;
+    if (name == Unknown) return Cmp::greater;  // Unknown seasons are in the future
+    if (season.name == Unknown) return Cmp::less;
+    return name < season.name ? Cmp::less : Cmp::greater;
   }
 
-  return cmp::equal;
+  return Cmp::equal;
 }
 
-bool Season::has_name() const {
+bool Season::hasName() const {
   return name != Unknown;
 }
 
-bool Season::has_year() const {
+bool Season::hasYear() const {
   return static_cast<int>(year);
 }
 

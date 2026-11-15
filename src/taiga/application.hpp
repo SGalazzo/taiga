@@ -54,6 +54,7 @@ private:
   void initLogger() const;
   void onNewConnection();
   void parseCommandLine();
+  void showMainWindow();
 
   struct Options {
     bool debug = false;
@@ -61,8 +62,8 @@ private:
   } options_;
 
   QCommandLineParser parser_;
-  QSharedMemory shared_memory_;
-  QLocalServer local_server_;
+  QSharedMemory sharedMemory_;
+  QLocalServer localServer_;
   QPointer<gui::MainWindow> window_;
 };
 

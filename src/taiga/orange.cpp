@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 namespace {
 
 // clang-format off
-constexpr std::array<std::pair<int, float>, 32> notes{{
+constexpr std::array<std::pair<int, float>, 32> kNotes{{
   {84, 1/2.f}, {84, 1/4.f}, {86, 1/8.f}, {84, 1/4.f},
   {82, 1/4.f}, {81, 1/4.f}, {77, 1/8.f}, {79, 1/8.f},
   {72, 1/8.f}, {77, 1/2.f}, {76, 1/8.f}, {77, 1/8.f},
@@ -40,12 +40,12 @@ constexpr std::array<std::pair<int, float>, 32> notes{{
 }};
 // clang-format on
 
-constexpr float get_frequency(const int note) {
+constexpr float getFrequency(const int note) {
   if (note < 0 || note > 119) return -1.0f;
   return 440.0f * std::pow(2.0f, static_cast<float>(note - 57) / 12.0f);
 };
 
-constexpr float get_duration(const float duration) {
+constexpr float getDuration(const float duration) {
   return 1600 * duration;
 };
 
@@ -61,10 +61,10 @@ Orange::~Orange() {
 }
 
 void Orange::run() {
-  for (const auto& [note, duration] : notes) {
+  for (const auto& [note, duration] : kNotes) {
     if (isInterruptionRequested()) break;
 #ifdef Q_OS_WINDOWS
-    ::Beep(static_cast<DWORD>(get_frequency(note)), static_cast<DWORD>(get_duration(duration)));
+    ::Beep(static_cast<DWORD>(getFrequency(note)), static_cast<DWORD>(getDuration(duration)));
 #endif
   }
 }

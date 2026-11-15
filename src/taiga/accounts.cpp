@@ -18,6 +18,8 @@
 
 #include "accounts.hpp"
 
+#include <QCoreApplication>
+
 #include "base/string.hpp"
 #include "sync/anilist/anilist_ratings.hpp"
 #include "sync/kitsu/kitsu_ratings.hpp"
@@ -25,10 +27,10 @@
 
 namespace taiga {
 
-Accounts::Accounts() : QObject{} {}
+Accounts::Accounts(QObject* parent) : QObject{parent} {}
 
 QString Accounts::fileName() const {
-  return u"%1/accounts.json"_s.arg(get_data_path());
+  return u"%1/accounts.json"_s.arg(getDataPath());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -127,6 +129,23 @@ void Accounts::setKitsuAuthenticated(bool authenticated) {
   emit authenticationChanged(authenticated);
 }
 
+void Accounts::setKitsuCredentials(const std::string& email, const std::string& username,
+                                   const std::string& password) {
+  if (email == kitsuEmail() && username == kitsuUsername() && password == kitsuPassword()) {
+    return;
+  }
+
+  setKitsuEmail(email);
+  setKitsuUsername(username);
+  setKitsuPassword(password);
+
+  // Session data belongs to the previous credentials
+  setKitsuAccessToken({});
+  setKitsuRefreshToken({});
+  setKitsuUserId({});
+  setKitsuAuthenticated(false);
+}
+
 void Accounts::setKitsuAccessToken(const std::string& accessToken) const {
   setValue("kitsu.accessToken", accessToken);
 }
@@ -183,6 +202,11 @@ std::string Accounts::serviceUsername(const std::string& service) const {
   if (service == "kitsu") return kitsuUsername();
   if (service == "myanimelist") return myanimelistUsername();
   return {};
+}
+
+Accounts* accounts() {
+  static auto instance = new Accounts{qApp};
+  return instance;
 }
 
 }  // namespace taiga

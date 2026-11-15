@@ -18,6 +18,7 @@
 
 #include "media.hpp"
 
+#include <QCoreApplication>
 #include <algorithm>
 #include <optional>
 #include <string>
@@ -136,22 +137,25 @@ bool Detection::init() {
 
   setPollingEnabled(isEnabled());
 
+  connect(taiga::settings(), &taiga::Settings::changed, this, [this](const QSet<QString>& keys) {
+    static const QSet<QString> relevantKeys{
+        taiga::Settings::Key::kDetectionEnabled,
+        taiga::Settings::Key::kDetectionInterval,
+    };
+    if (keys.intersects(relevantKeys)) setPollingEnabled(isEnabled());
+  });
+
   return true;
 }
 
 bool Detection::isEnabled() const {
-  return taiga::settings.detectionEnabled();
-}
-
-void Detection::setEnabled(bool enabled) {
-  taiga::settings.setDetectionEnabled(enabled);
-  setPollingEnabled(enabled);
+  return taiga::settings()->detectionEnabled();
 }
 
 void Detection::setPollingEnabled(bool enabled) {
 #ifdef Q_OS_WINDOWS
   if (enabled) {
-    const auto interval = taiga::settings.mediaDetectionInterval();
+    const auto interval = taiga::settings()->detectionInterval();
     pollTimer_->start(interval);
   } else {
     pollTimer_->stop();
@@ -164,12 +168,12 @@ void Detection::poll() {
 #ifdef Q_OS_WINDOWS
   const auto players = getEnabledPlayers(players_);
 
-  static const auto media_proc = [](const anisthesia::MediaInfo&) {
+  static const auto mediaProc = [](const anisthesia::MediaInfo&) {
     return true;  // Accept all media
   };
 
   std::vector<anisthesia::win::Result> results;
-  if (!anisthesia::win::GetResults(players, media_proc, results)) {
+  if (!anisthesia::win::GetResults(players, mediaProc, results)) {
     reset();
     return;
   }
@@ -267,6 +271,11 @@ bool Detection::hasEpisodeChanged(const Episode& episode) const {
 
   return currentEpisode_->elements(anitomy::ElementKind::Episode) !=
          episode.elements(anitomy::ElementKind::Episode);
+}
+
+Detection* detection() {
+  static auto instance = new Detection{qApp};
+  return instance;
 }
 
 }  // namespace track::media

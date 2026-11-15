@@ -51,7 +51,7 @@ constexpr int kSeasonPageLimit = 500;
 Service::Service() : sync::Service{ServiceId::MyAnimeList} {
   api_.setBaseUrl(QUrl{kApiUrl});
 
-  if (const auto token = taiga::accounts.myanimelistAccessToken(); !token.empty()) {
+  if (const auto token = taiga::accounts()->myanimelistAccessToken(); !token.empty()) {
     api_.setBearerToken(QByteArray::fromStdString(token));
   }
 }
@@ -85,7 +85,7 @@ void Service::fetchAnime(const int id) {
       return;
     }
 
-    anime::db.updateItem(*item);
+    anime::db()->updateItem(*item);
   };
 
   manager_.get(api_.createRequest(u"/anime/%1"_s.arg(id), query), this, callback);
@@ -128,8 +128,8 @@ void Service::search(const SearchParams& params, const int offset) {
 
     QList<int> ids;
     for (const auto& value : root["data"].toArray()) {
-      if (const auto item = parseAnime(value.toObject()["node"])) {
-        anime::db.updateItem(*item);
+      if (const auto item = parseAnime(value.toObject().value("node"))) {
+        anime::db()->updateItem(*item);
         ids.append(item->id);
       }
     }
@@ -148,7 +148,7 @@ void Service::search(const SearchParams& params, const int offset) {
 }
 
 void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
-  const auto username = QString::fromStdString(taiga::accounts.myanimelistUsername());
+  const auto username = QString::fromStdString(taiga::accounts()->myanimelistUsername());
   const auto path = u"/users/%1/animelist"_s.arg(username);
 
   const QUrlQuery query{
@@ -191,8 +191,8 @@ void Service::fetchListEntries(const int offset, QSet<int> fetchedIds) {
         fetchedIds.insert(item->id);
       }
     }
-    anime::db.updateItems(items);
-    anime::db.updateEntries(entries);
+    anime::db()->updateItems(items);
+    anime::db()->updateEntries(entries);
 
     if (const auto nextOffset = pagingOffset(root["paging"].toObject(), u"next"_s)) {
       fetchListEntries(*nextOffset, fetchedIds);
@@ -214,11 +214,11 @@ void Service::deleteListEntry(const int id) {
     if (isError(reply) && reply.httpStatus() != 404) {
       if (retryOnTokenExpiry(reply, [this, id] { deleteListEntry(id); })) return;
       handleError(*this, reply);
-      sync::queue.complete(false, "Failed to delete list entry.");
+      sync::queue()->complete(false, "Failed to delete list entry.");
       return;
     }
 
-    sync::queue.complete(true);
+    sync::queue()->complete(true);
   };
 
   manager_.deleteResource(api_.createRequest(u"/anime/%1/my_list_status"_s.arg(id)), this,
@@ -226,7 +226,7 @@ void Service::deleteListEntry(const int id) {
 }
 
 void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
 
   if (!listEntry) return;
 
@@ -234,7 +234,7 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
 
   taiga::NameValuePairs body;
   if (dirty & Field::Episode) {
-    body.emplaceBack(u"num_watched_episodes"_s, QString::number(listEntry->watched_episodes));
+    body.emplaceBack(u"num_watched_episodes"_s, QString::number(listEntry->watchedEpisodes));
   }
   if (dirty & (Field::Status | Field::Rewatching)) {
     body.emplaceBack(u"status"_s, fromListStatus(listEntry->status));
@@ -244,14 +244,13 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
     body.emplaceBack(u"score"_s, QString::number(fromListScore(listEntry->score)));
   }
   if (dirty & Field::RewatchedTimes) {
-    body.emplaceBack(u"num_times_rewatched"_s, QString::number(listEntry->rewatched_times));
+    body.emplaceBack(u"num_times_rewatched"_s, QString::number(listEntry->rewatchedTimes));
   }
   if (dirty & Field::DateStarted) {
-    body.emplaceBack(u"start_date"_s, QString::fromStdString(listEntry->date_started.to_string()));
+    body.emplaceBack(u"start_date"_s, QString::fromStdString(listEntry->dateStarted.toString()));
   }
   if (dirty & Field::DateCompleted) {
-    body.emplaceBack(u"finish_date"_s,
-                     QString::fromStdString(listEntry->date_completed.to_string()));
+    body.emplaceBack(u"finish_date"_s, QString::fromStdString(listEntry->dateCompleted.toString()));
   }
   if (dirty & Field::Notes) {
     body.emplaceBack(u"comments"_s, QString::fromStdString(listEntry->notes));
@@ -265,21 +264,21 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
       if (retryOnTokenExpiry(reply, [this, id, dirty] { updateListEntry(id, dirty); })) return;
       handleError(*this, reply,
                   reply.httpStatus() == 404 ? u"Anime list entry does not exist."_s : QString{});
-      sync::queue.complete(false, "Failed to update list entry.");
+      sync::queue()->complete(false, "Failed to update list entry.");
       return;
     }
 
     const auto json = reply.readJson();
     if (!json) {
       handleError(*this, reply, "Could not parse list entry.");
-      sync::queue.complete(false, "Could not parse list entry.");
+      sync::queue()->complete(false, "Could not parse list entry.");
       return;
     }
 
     if (const auto entry = parseListEntry(json->object(), id)) {
-      sync::queue.complete(*entry);
+      sync::queue()->complete(*entry);
     } else {
-      sync::queue.complete(true);
+      sync::queue()->complete(true);
     }
   };
 

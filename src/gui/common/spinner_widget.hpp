@@ -30,7 +30,6 @@ class SpinnerWidget final : public QLabel {
 
 public:
   explicit SpinnerWidget(QWidget* parent = nullptr, int size = 16);
-  ~SpinnerWidget() = default;
 
   void setSize(int size);
 
@@ -40,9 +39,9 @@ public:
 private:
   void advance();
 
-  QPixmap m_basePixmap;
-  QTimer m_timer;
-  qreal m_angle = 0.0;
+  QPixmap basePixmap_;
+  QTimer timer_;
+  qreal angle_ = 0.0;
 };
 
 }  // namespace gui

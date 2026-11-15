@@ -19,7 +19,6 @@
 #pragma once
 
 #include <QByteArray>
-#include <QCoreApplication>
 #include <QHttpHeaders>
 #include <QList>
 #include <QNetworkAccessManager>
@@ -36,15 +35,11 @@ class NetworkAccessManager final : public QNetworkAccessManager {
 
 public:
   NetworkAccessManager(QObject* parent);
-  ~NetworkAccessManager() = default;
 
   static QHttpHeaders commonHeaders();
 };
 
-inline NetworkAccessManager* network() {
-  static auto manager = new NetworkAccessManager{qApp};
-  return manager;
-}
+NetworkAccessManager* network();
 
 using NameValuePairs = QList<QPair<QString, QString>>;
 

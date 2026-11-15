@@ -33,8 +33,7 @@ class Database final : public QObject {
   Q_DISABLE_COPY_MOVE(Database)
 
 public:
-  Database();
-  ~Database() = default;
+  explicit Database(QObject* parent);
 
   void init();
 
@@ -89,6 +88,6 @@ private:
   QMap<int, Settings> settings_;
 };
 
-inline Database db;
+Database* db();
 
 }  // namespace anime

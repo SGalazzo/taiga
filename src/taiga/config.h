@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@
 // Relative path to avoid RC1015 error with version.rc
 #include "../base/preprocessor.h"
 
+// clang-format off
+
 #define TAIGA_APP_NAME  "Taiga"
 #define TAIGA_APP_MUTEX "Taiga-33d5a63c-de90-432f-9a8b-f6f733dab258"
 
@@ -46,3 +48,5 @@
     STRINGIZE(TAIGA_VERSION_MAJOR) "." \
     STRINGIZE(TAIGA_VERSION_MINOR) "." \
     STRINGIZE(TAIGA_VERSION_PATCH) "\0"
+
+// clang-format on

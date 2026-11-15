@@ -33,14 +33,14 @@
 
 namespace gui {
 
-constexpr int itemHeight = 210;
-constexpr int posterWidth = itemHeight * 2 / 3;
+constexpr int kItemHeight = 210;
+constexpr int kPosterWidth = kItemHeight * 2 / 3;
 constexpr int kSpinnerSize = 24;
 
 ListItemDelegateCards::ListItemDelegateCards(QObject* parent) : QStyledItemDelegate(parent) {
-  m_spinnerPixmap = theme.getIcon("progress_activity").pixmap(QSize(kSpinnerSize, kSpinnerSize));
+  spinnerPixmap_ = theme()->getIcon("progress_activity").pixmap(QSize(kSpinnerSize, kSpinnerSize));
 
-  connect(&m_timerSpinner, &QTimer::timeout, this, &ListItemDelegateCards::advanceSpinner);
+  connect(&timerSpinner_, &QTimer::timeout, this, &ListItemDelegateCards::advanceSpinner);
 }
 
 void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem& option,
@@ -54,38 +54,36 @@ void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem&
   const auto entry =
       index.data(static_cast<int>(AnimeListItemDataRole::ListEntry)).value<const ListEntry*>();
 
-  QStyleOptionViewItem opt = option;
+  const QStyleOptionViewItem& opt = option;
   QRect rect = opt.rect;
 
   QPainterPath path;
   path.addRoundedRect(rect, 4, 4);
   painter->setClipPath(path);
 
+  const auto& colors = theme()->colors();
+
   // Background
+  painter->fillRect(rect, colors.itemAlternate);
   if (option.state & QStyle::State_Selected) {
-    painter->fillRect(rect, opt.palette.highlight());
-  } else if (theme.isDark()) {
-    painter->fillRect(rect, opt.palette.mid());
-  } else {
-    painter->fillRect(rect, opt.palette.alternateBase());
+    painter->fillRect(rect, option.state & QStyle::State_Active ? colors.itemSelected
+                                                                : colors.itemSelectedInactive);
+  } else if (option.state & QStyle::State_MouseOver) {
+    painter->fillRect(rect, colors.itemHover);
   }
 
   // Poster
   {
     QRect posterRect = rect;
-    posterRect.setWidth(posterWidth);
+    posterRect.setWidth(kPosterWidth);
 
-    if (theme.isDark()) {
-      painter->fillRect(posterRect, opt.palette.dark());
-    } else {
-      painter->fillRect(posterRect, opt.palette.mid());
-    }
+    painter->fillRect(posterRect, theme()->isDark() ? opt.palette.dark() : opt.palette.mid());
 
     const auto pixmap =
         index.data(static_cast<int>(AnimeListItemDataRole::Poster)).value<QPixmap>();
 
     if (!pixmap.isNull()) {
-      m_loadingIndices.remove(index);
+      loadingIndices_.remove(index);
 
       const auto scaled =
           pixmap.size().scaled(posterRect.size(), Qt::AspectRatioMode::KeepAspectRatioByExpanding);
@@ -102,35 +100,35 @@ void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem&
       }
 
       painter->drawPixmap(posterRect, pixmap, sourceRect);
-    } else if (!item->image_url.empty()) {
-      m_loadingIndices.insert(index);
-      if (!m_timerSpinner.isActive()) {
-        m_timerSpinner.start(kSpinnerIntervalMs);
+    } else if (!item->imageUrl.empty()) {
+      loadingIndices_.insert(index);
+      if (!timerSpinner_.isActive()) {
+        timerSpinner_.start(kSpinnerIntervalMs);
       }
 
-      paintSpinner(painter, m_spinnerPixmap, posterRect.center(), m_angle);
+      paintSpinner(painter, spinnerPixmap_, posterRect.center(), angle_);
     } else {
-      m_loadingIndices.remove(index);
+      loadingIndices_.remove(index);
     }
   }
 
   if (entry) {
     auto progressOptions = opt;
     progressOptions.rect = rect;
-    progressOptions.rect.setWidth(posterWidth);
+    progressOptions.rect.setWidth(kPosterWidth);
     progressOptions.rect.setTop(progressOptions.rect.bottom() - 28);
     progressOptions.rect.adjust(4, 4, -4, -4);
     paintProgressBar(painter, progressOptions, item, entry);
   }
 
-  rect.adjust(posterWidth, 0, 0, 0);
+  rect.adjust(kPosterWidth, 0, 0, 0);
 
   // Title
   {
     QRect titleRect = rect;
     titleRect.setHeight(32);
 
-    painter->fillRect(titleRect, opt.palette.dark());
+    painter->fillRect(titleRect, colors.itemAlternate);
     titleRect.adjust(12, 0, -12, 0);
 
     auto titleFont = font;
@@ -151,11 +149,11 @@ void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem&
   {
     QStringList parts{
         formatType(item->type),
-        formatSeason(anime::Season{item->date_started}),
+        formatSeason(anime::Season{item->dateStarted}),
         formatScore(item->score),
     };
-    if (item->episode_count != 1) {
-      parts.insert(1, tr("%1 episodes").arg(formatNumber(item->episode_count, "?")));
+    if (item->episodeCount != 1) {
+      parts.insert(1, tr("%1 episodes").arg(formatNumber(item->episodeCount, "?")));
     }
     const QString summary = parts.join(" · ");
 
@@ -175,7 +173,7 @@ void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem&
   // Details
   {
     const QStringList lines{
-        u"%1 (%2)"_s.arg(formatFuzzyDateRange(item->date_started, item->date_finished))
+        u"%1 (%2)"_s.arg(formatFuzzyDateRange(item->dateStarted, item->dateFinished))
             .arg(formatStatus(item->status)),
         joinStrings(item->genres),
         joinStrings(!item->studios.empty() ? item->studios : item->producers),
@@ -214,6 +212,29 @@ void ListItemDelegateCards::paint(QPainter* painter, const QStyleOptionViewItem&
 
     painter->drawText(synopsisRect, Qt::TextWordWrap, synopsis);
   }
+
+  // Selection border
+  if (option.state & QStyle::State_Selected) {
+    paintSelectionBorder(painter, option);
+  }
+}
+
+void ListItemDelegateCards::paintSelectionBorder(QPainter* painter,
+                                                 const QStyleOptionViewItem& option) const {
+  constexpr qreal kBorderWidth = 1;
+  constexpr qreal kBorderRadius = 4;
+
+  QColor color = option.palette.highlight().color();
+  if (!(option.state & QStyle::State_Active)) color.setAlphaF(0.5f);
+
+  // Draw inside the card, since it is clipped to its rounded rect.
+  const qreal inset = kBorderWidth / 2;
+  const QRectF rect = QRectF(option.rect).adjusted(inset, inset, -inset, -inset);
+
+  painter->setRenderHint(QPainter::Antialiasing);
+  painter->setPen(QPen(color, kBorderWidth));
+  painter->setBrush(Qt::NoBrush);
+  painter->drawRoundedRect(rect, kBorderRadius - inset, kBorderRadius - inset);
 }
 
 QSize ListItemDelegateCards::sizeHint(const QStyleOptionViewItem& option,
@@ -231,19 +252,19 @@ void ListItemDelegateCards::initStyleOption(QStyleOptionViewItem* option,
 }
 
 void ListItemDelegateCards::advanceSpinner() {
-  m_angle += kSpinnerDegreesPerTick;
-  if (m_angle >= 360.0) m_angle -= 360.0;
+  angle_ += kSpinnerDegreesPerTick;
+  if (angle_ >= 360.0) angle_ -= 360.0;
 
   auto* view = reinterpret_cast<QListView*>(parent());
 
-  for (auto it = m_loadingIndices.begin(); it != m_loadingIndices.end();) {
+  for (auto it = loadingIndices_.begin(); it != loadingIndices_.end();) {
     const QModelIndex index = *it;
     const bool stillLoading =
         index.isValid() &&
         index.data(static_cast<int>(AnimeListItemDataRole::Poster)).value<QPixmap>().isNull();
 
     if (!stillLoading) {
-      it = m_loadingIndices.erase(it);
+      it = loadingIndices_.erase(it);
       continue;
     }
 
@@ -251,7 +272,7 @@ void ListItemDelegateCards::advanceSpinner() {
     ++it;
   }
 
-  if (m_loadingIndices.isEmpty()) m_timerSpinner.stop();
+  if (loadingIndices_.isEmpty()) timerSpinner_.stop();
 }
 
 QSize ListItemDelegateCards::itemSize() const {
@@ -274,7 +295,7 @@ QSize ListItemDelegateCards::itemSize() const {
   const int columnsWidth = availableWidth - (columns * spacing);
   const float itemWidth = columnsWidth / static_cast<float>(columns);
 
-  return QSize(std::floor(itemWidth), itemHeight);
+  return QSize(std::floor(itemWidth), kItemHeight);
 }
 
 }  // namespace gui

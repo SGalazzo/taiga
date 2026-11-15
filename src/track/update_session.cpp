@@ -18,6 +18,8 @@
 
 #include "update_session.hpp"
 
+#include <QCoreApplication>
+
 #include "base/log.hpp"
 #include "media/anime.hpp"
 #include "media/anime_db.hpp"
@@ -42,8 +44,8 @@ bool isSameMedia(const Episode& previous, const Episode& current) {
 }
 
 bool isOutsideLibrary() {
-  if (!taiga::settings.updateLibraryOnly()) return false;
-  if (taiga::settings.libraryFolders().empty()) return false;
+  if (!taiga::settings()->updateLibraryOnly()) return false;
+  if (taiga::settings()->libraryFolders().empty()) return false;
 
   const auto file = media::detection()->getCurrentFile();
   if (!file) return false;
@@ -61,8 +63,22 @@ UpdateSession::UpdateSession(QObject* parent) : QObject(parent) {
 }
 
 void UpdateSession::init() {
+  loadSettings();
+
   connect(media::detection(), &media::Detection::currentEpisodeChanged, this,
           &UpdateSession::onEpisodeChanged);
+
+  // Changes apply to the current media too. Time already watched still counts towards the delay.
+  connect(taiga::settings(), &taiga::Settings::changed, this, [this](const QSet<QString>& keys) {
+    static const QSet<QString> relevantKeys{
+        taiga::Settings::Key::kUpdateDelay,
+        taiga::Settings::Key::kUpdateTrigger,
+        taiga::Settings::Key::kUpdatePauseWhenUnfocused,
+    };
+    if (!keys.intersects(relevantKeys)) return;
+    loadSettings();
+    evaluate();
+  });
 }
 
 const UpdateState& UpdateSession::state() const {
@@ -72,10 +88,10 @@ const UpdateState& UpdateSession::state() const {
 void UpdateSession::accept() {
   if (!episode_ || committed_) return;
 
-  const auto* item = anime::db.item(episode_->animeId());
+  const auto* item = anime::db()->item(episode_->animeId());
   if (!item) return;
 
-  const auto* entry = anime::db.entry(item->id);
+  const auto* entry = anime::db()->entry(item->id);
   const auto decision = decideUpdate(*episode_, *item, entry, outsideLibrary_);
   if (decision.action == UpdateDecision::Action::Deny) return;
 
@@ -89,6 +105,13 @@ void UpdateSession::cancel() {
   evaluate();
 }
 
+void UpdateSession::loadSettings() {
+  delay_ = taiga::settings()->updateDelay();
+  trigger_ = taiga::settings()->updateTrigger();
+  pauseWhenUnfocused_ = taiga::settings()->updatePauseWhenUnfocused();
+  if (!pauseWhenUnfocused_) paused_ = false;
+}
+
 void UpdateSession::onEpisodeChanged(std::optional<Episode> episode) {
   if (!episode) {
     onMediaClosed();
@@ -97,9 +120,6 @@ void UpdateSession::onEpisodeChanged(std::optional<Episode> episode) {
 
   if (!episode_ || !isSameMedia(*episode_, *episode)) {
     elapsed_ = std::chrono::seconds{0};
-    delay_ = taiga::settings.updateDelay();
-    trigger_ = taiga::settings.updateTrigger();
-    pauseWhenUnfocused_ = taiga::settings.updatePauseWhenUnfocused();
     paused_ = false;
     dismissed_ = false;
     committed_ = false;
@@ -124,7 +144,8 @@ void UpdateSession::onMediaClosed() {
 
   switch (state_.phase) {
     case UpdateState::Phase::WaitingForClose:
-      if (const auto* item = anime::db.item(episode_->animeId())) {
+      if (!episode_) break;
+      if (const auto* item = anime::db()->item(episode_->animeId())) {
         commit(*item);
         return;
       }
@@ -151,13 +172,13 @@ void UpdateSession::tick() {
 void UpdateSession::evaluate() {
   if (committed_) return;
 
-  const auto* item = episode_ ? anime::db.item(episode_->animeId()) : nullptr;
+  const auto* item = episode_ ? anime::db()->item(episode_->animeId()) : nullptr;
   if (!item) {
     setState({});
     return;
   }
 
-  const auto* entry = anime::db.entry(item->id);
+  const auto* entry = anime::db()->entry(item->id);
   const auto decision = decideUpdate(*episode_, *item, entry, outsideLibrary_);
 
   using Action = UpdateDecision::Action;
@@ -165,8 +186,9 @@ void UpdateSession::evaluate() {
 
   UpdateState state{
       .reason = decision.reason,
+      .animeId = item->id,
       .episode = watchedEpisodeNumber(*episode_, *item).value_or(0),
-      .previousEpisode = anime::list::isInList(entry) ? entry->watched_episodes : 0,
+      .previousEpisode = anime::list::isInList(entry) ? entry->watchedEpisodes : 0,
   };
 
   switch (decision.action) {
@@ -201,11 +223,11 @@ void UpdateSession::evaluate() {
 }
 
 void UpdateSession::commit(const Anime& item) {
-  const auto* entry = anime::db.entry(item.id);
+  const auto* entry = anime::db()->entry(item.id);
   const auto number = watchedEpisodeNumber(*episode_, item);
   if (!number) return;
 
-  const int previous = anime::list::isInList(entry) ? entry->watched_episodes : 0;
+  const int previous = anime::list::isInList(entry) ? entry->watchedEpisodes : 0;
 
   qDebug() << "Updating list:" << item.id << "episode" << *number;
   anime::list::save(anime::list::entryWithEpisodeWatched(item, entry, *number));
@@ -215,6 +237,7 @@ void UpdateSession::commit(const Anime& item) {
 
   setState({
       .phase = UpdateState::Phase::Committed,
+      .animeId = item.id,
       .episode = *number,
       .previousEpisode = previous,
   });
@@ -232,6 +255,11 @@ void UpdateSession::setState(const UpdateState& state) {
 
   state_ = state;
   emit stateChanged(state_);
+}
+
+UpdateSession* updateSession() {
+  static auto instance = new UpdateSession{qApp};
+  return instance;
 }
 
 }  // namespace track

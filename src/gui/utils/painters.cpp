@@ -48,8 +48,8 @@ void paintProgressBar(QPainter* painter, const QStyleOption& option, const Anime
                       const ListEntry* entry) {
   if (!anime || !entry) return;
 
-  const int episodes = anime->episode_count;
-  const int watched = std::clamp(entry->watched_episodes, 0,
+  const int episodes = anime->episodeCount;
+  const int watched = std::clamp(entry->watchedEpisodes, 0,
                                  episodes > 0 ? episodes : std::numeric_limits<int>::max());
   const auto text = u"%1/%2"_s.arg(watched).arg(formatNumber(episodes, "?"));
 
@@ -59,9 +59,7 @@ void paintProgressBar(QPainter* painter, const QStyleOption& option, const Anime
   styleOption.rect = option.rect;
   styleOption.palette = option.palette;
   styleOption.palette.setCurrentColorGroup(QPalette::ColorGroup::Active);
-  styleOption.palette.setColor(QPalette::ColorRole::Highlight, theme.isDark()
-                                                                   ? QColor{12, 164, 12, 128}
-                                                                   : QColor{12, 164, 12, 255});
+  styleOption.palette.setColor(QPalette::ColorRole::Highlight, theme()->colors().progress);
   styleOption.fontMetrics = option.fontMetrics;
   styleOption.maximum = 100;
   styleOption.minimum = 0;

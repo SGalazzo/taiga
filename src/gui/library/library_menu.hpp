@@ -30,8 +30,7 @@ class LibraryMenu final : public QMenu {
   Q_DISABLE_COPY_MOVE(LibraryMenu)
 
 public:
-  LibraryMenu(QWidget* parent, const QString& path, int anime_id);
-  ~LibraryMenu() = default;
+  LibraryMenu(QWidget* parent, QString path, int animeId);
 
   void popup();
 
@@ -46,8 +45,8 @@ private slots:
   void viewDetails() const;
 
 private:
-  int m_anime_id = 0;
-  QString m_path;
+  int animeId_ = 0;
+  QString path_;
 };
 
 }  // namespace gui

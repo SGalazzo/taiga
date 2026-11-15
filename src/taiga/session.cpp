@@ -32,13 +32,13 @@
 namespace taiga {
 
 QString Session::fileName() const {
-  return u"%1/session.json"_s.arg(get_data_path());
+  return u"%1/session.json"_s.arg(getDataPath());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 int Session::animeListSortColumn() const {
-  return value("animeList.sortColumn", gui::AnimeListModel::COLUMN_TITLE).toInt();
+  return value("animeList.sortColumn", gui::AnimeListModel::ColumnTitle).toInt();
 }
 
 Qt::SortOrder Session::animeListSortOrder() const {
@@ -61,6 +61,10 @@ gui::ListViewMode Session::animeListViewMode() const {
 
 QByteArray Session::mainWindowGeometry() const {
   return QByteArray::fromBase64(value("mainWindow.geometry", QByteArray{}).toByteArray());
+}
+
+bool Session::mainWindowTrayNoticeShown() const {
+  return value("mainWindow.trayNoticeShown", false).toBool();
 }
 
 QByteArray Session::mediaDialogGeometry() const {
@@ -100,7 +104,7 @@ gui::AnimeListProxyModelFilter Session::searchListFilters() const {
 }
 
 int Session::searchListSortColumn() const {
-  return value("searchList.sortColumn", gui::AnimeListModel::COLUMN_AVERAGE).toInt();
+  return value("searchList.sortColumn", gui::AnimeListModel::ColumnAverage).toInt();
 }
 
 Qt::SortOrder Session::searchListSortOrder() const {
@@ -145,6 +149,10 @@ void Session::setAnimeListViewMode(const gui::ListViewMode mode) const {
 
 void Session::setMainWindowGeometry(const QByteArray& geometry) const {
   setValue("mainWindow.geometry", geometry.toBase64().toStdString());
+}
+
+void Session::setMainWindowTrayNoticeShown(const bool shown) const {
+  setValue("mainWindow.trayNoticeShown", shown);
 }
 
 void Session::setMediaDialogGeometry(const QByteArray& geometry) const {

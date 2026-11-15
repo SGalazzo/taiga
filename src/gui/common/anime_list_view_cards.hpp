@@ -35,10 +35,9 @@ class ListViewCards final : public QListView {
 public:
   ListViewCards(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* proxyModel,
                 AnimeListContext context);
-  ~ListViewCards() = default;
 
   ListViewBase* baseView() {
-    return m_base;
+    return base_;
   }
 
 protected:
@@ -48,7 +47,7 @@ protected:
   void wheelEvent(QWheelEvent* event) override;
 
 private:
-  ListViewBase* m_base = nullptr;
+  ListViewBase* base_ = nullptr;
 };
 
 }  // namespace gui

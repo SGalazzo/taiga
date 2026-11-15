@@ -35,9 +35,8 @@ class MediaMenu final : public QMenu {
   Q_DISABLE_COPY_MOVE(MediaMenu)
 
 public:
-  MediaMenu(QWidget* parent, const QList<Anime>& items, const QMap<int, ListEntry> entries,
+  MediaMenu(QWidget* parent, const QList<Anime>& items, const QMap<int, ListEntry>& entries,
             QItemSelectionModel* selectionModel, AnimeListContext context);
-  ~MediaMenu() = default;
 
   void popup();
 
@@ -87,10 +86,10 @@ private:
 
   const ListEntry* getEntry(int id) const;
 
-  const QList<Anime> m_items;
-  const QMap<int, ListEntry> m_entries;
-  QItemSelectionModel* m_selectionModel = nullptr;
-  const AnimeListContext m_context;
+  const QList<Anime> items_;
+  const QMap<int, ListEntry> entries_;
+  QItemSelectionModel* selectionModel_ = nullptr;
+  const AnimeListContext context_;
 };
 
 }  // namespace gui

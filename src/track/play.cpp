@@ -30,7 +30,7 @@
 namespace track {
 
 bool playEpisode(int animeId, int number) {
-  const auto libraryFolders = taiga::settings.libraryFolders();
+  const auto libraryFolders = taiga::settings()->libraryFolders();
 
   for (const auto& folder : libraryFolders) {
     const auto episodePath = findEpisode(QString::fromStdString(folder), animeId, number);
@@ -46,16 +46,16 @@ bool playEpisode(int animeId, int number) {
 }
 
 std::optional<int> nextEpisodeNumber(int animeId) {
-  const auto item = anime::db.item(animeId);
+  const auto item = anime::db()->item(animeId);
   if (!item) return std::nullopt;
 
-  const auto entry = anime::db.entry(animeId);
-  const int watched_episodes = entry ? entry->watched_episodes : 0;
+  const auto entry = anime::db()->entry(animeId);
+  const int watchedEpisodes = entry ? entry->watchedEpisodes : 0;
 
-  int number = watched_episodes + 1;
+  int number = watchedEpisodes + 1;
 
   // Replay first episode for completed anime.
-  if (item->episode_count > 0 && number > item->episode_count) {
+  if (item->episodeCount > 0 && number > item->episodeCount) {
     number = 1;
   }
 
@@ -63,29 +63,29 @@ std::optional<int> nextEpisodeNumber(int animeId) {
 }
 
 std::optional<int> randomEpisodeNumber(int animeId) {
-  const auto item = anime::db.item(animeId);
+  const auto item = anime::db()->item(animeId);
   if (!item) return std::nullopt;
 
-  const auto entry = anime::db.entry(animeId);
-  const int watched_episodes = entry ? entry->watched_episodes : 0;
+  const auto entry = anime::db()->entry(animeId);
+  const int watchedEpisodes = entry ? entry->watchedEpisodes : 0;
 
-  int max_episode = item->episode_count;
+  int maxEpisode = item->episodeCount;
 
   // Avoid spoiling unwatched episodes, unless the series is completed.
-  // `watched_episodes < episode_count` can be true if rewatching.
+  // `watchedEpisodes < episodeCount` can be true if rewatching.
   const bool completed = entry && entry->status == anime::list::Status::Completed;
   if (!completed) {
-    max_episode = watched_episodes + 1;
+    maxEpisode = watchedEpisodes + 1;
   }
 
   // Clamp to the known episode count, if any.
-  if (item->episode_count > 0) {
-    max_episode = std::min(max_episode, item->episode_count);
+  if (item->episodeCount > 0) {
+    maxEpisode = std::min(maxEpisode, item->episodeCount);
   }
 
-  if (max_episode < 1) return std::nullopt;
+  if (maxEpisode < 1) return std::nullopt;
 
-  return QRandomGenerator::global()->bounded(1, max_episode + 1);
+  return QRandomGenerator::global()->bounded(1, maxEpisode + 1);
 }
 
 }  // namespace track
