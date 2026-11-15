@@ -53,6 +53,8 @@ public:
   std::string proxyPassword() const;
   bool sharingEnabled() const;
   bool streamingMediaEnabled() const;
+  std::vector<std::string> streamingSites() const;
+  bool streamingSitesOnly() const;
   bool syncEnabled() const;
   anime::TitleLanguage titleLanguage() const;
   std::chrono::seconds updateDelay() const;
@@ -75,6 +77,8 @@ public:
   void setProxyPassword(const std::string& password) const;
   void setSharingEnabled(const bool enabled) const;
   void setStreamingMediaEnabled(const bool enabled) const;
+  void setStreamingSites(std::vector<std::string> sites) const;
+  void setStreamingSitesOnly(const bool enabled) const;
   void setSyncEnabled(const bool enabled) const;
   void setTitleLanguage(const anime::TitleLanguage language) const;
   void setUpdateDelay(const std::chrono::seconds delay) const;
