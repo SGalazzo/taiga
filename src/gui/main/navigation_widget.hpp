@@ -35,7 +35,6 @@ class NavigationWidget final : public QTreeWidget {
 
 public:
   NavigationWidget(QWidget* parent);
-  ~NavigationWidget() = default;
 
   QTreeWidgetItem* findItemByPage(MainWindowPage page) const;
   QTreeWidgetItem* findListStatusItem(anime::list::Status status) const;
@@ -44,7 +43,7 @@ public slots:
   void refresh();
 
 signals:
-  void currentPageChanged(MainWindowPage page);
+  void currentPageChanged(gui::MainWindowPage page);
   void currentListStatusChanged(anime::list::Status status);
 
 protected:

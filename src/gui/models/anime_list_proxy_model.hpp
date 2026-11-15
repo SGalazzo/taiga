@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QSortFilterProxyModel>
+#include <compare>
 #include <optional>
 
 namespace gui {
@@ -43,7 +44,6 @@ class AnimeListProxyModel final : public QSortFilterProxyModel {
 
 public:
   AnimeListProxyModel(QObject* parent);
-  ~AnimeListProxyModel() = default;
 
   const AnimeListProxyModelFilter& filters() const;
   void setFilters(const AnimeListProxyModelFilter& filters);
@@ -54,13 +54,25 @@ public:
   void setStatusFilter(std::optional<int> status);
   void setListStatusFilter(AnimeListStatusFilter filter);
   void setTextFilter(const QString& text);
+  void setNsfwHidden(bool hidden);
+
+  int secondarySortColumn() const;
+  Qt::SortOrder secondarySortOrder() const;
+  void setSecondarySort(int column, Qt::SortOrder order);
+
+  void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
 
 protected:
   bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
   bool lessThan(const QModelIndex& lhs, const QModelIndex& rhs) const override;
 
 private:
-  AnimeListProxyModelFilter m_filter;
+  std::partial_ordering compare(const QModelIndex& lhs, const QModelIndex& rhs, int column) const;
+
+  AnimeListProxyModelFilter filter_;
+  bool nsfwHidden_ = false;
+  int secondarySortColumn_ = -1;
+  Qt::SortOrder secondarySortOrder_ = Qt::AscendingOrder;
 };
 
 }  // namespace gui

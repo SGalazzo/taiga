@@ -21,6 +21,8 @@ target_sources(taiga-gui PRIVATE
 	common/clickable_label.hpp
 	common/combobox.cpp
 	common/combobox.hpp
+	common/header_view.cpp
+	common/header_view.hpp
 	common/page_widget.cpp
 	common/page_widget.hpp
 	common/poster_widget.cpp
@@ -91,6 +93,8 @@ target_sources(taiga-gui PRIVATE
 	settings/settings_page_media_players.hpp
 	settings/settings_page_recognition.cpp
 	settings/settings_page_recognition.hpp
+	settings/settings_page_sharing.cpp
+	settings/settings_page_sharing.hpp
 	settings/settings_page_streaming.cpp
 	settings/settings_page_streaming.hpp
 	settings/settings_player_list.cpp

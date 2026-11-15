@@ -41,10 +41,9 @@ class ListViewBase final : public QObject {
 public:
   ListViewBase(QWidget* parent, QAbstractItemView* view, AnimeListModel* model,
                AnimeListProxyModel* proxyModel, AnimeListContext context);
-  ~ListViewBase() = default;
 
   AnimeListContext context() const {
-    return m_context;
+    return context_;
   }
 
 public slots:
@@ -58,10 +57,10 @@ public slots:
 private:
   QModelIndexList selectedIndexes();
 
-  AnimeListModel* m_model = nullptr;
-  AnimeListProxyModel* m_proxyModel = nullptr;
-  QAbstractItemView* m_view = nullptr;
-  const AnimeListContext m_context;
+  AnimeListModel* model_ = nullptr;
+  AnimeListProxyModel* proxyModel_ = nullptr;
+  QAbstractItemView* view_ = nullptr;
+  const AnimeListContext context_;
 };
 
 }  // namespace gui

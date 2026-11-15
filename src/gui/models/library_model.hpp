@@ -28,17 +28,16 @@ class LibraryModel final : public QFileSystemModel {
 
 public:
   enum Column {
-    COLUMN_NAME,
-    COLUMN_SIZE,
-    COLUMN_TYPE,
-    COLUMN_MODIFIED,
-    COLUMN_ANIME,
-    COLUMN_EPISODE,
-    NUM_COLUMNS,
+    ColumnName,
+    ColumnSize,
+    ColumnType,
+    ColumnModified,
+    ColumnAnime,
+    ColumnEpisode,
+    NumColumns,
   };
 
   LibraryModel(QObject* parent);
-  ~LibraryModel() = default;
 
   int columnCount(const QModelIndex& parent = {}) const override;
   QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
@@ -59,7 +58,7 @@ private:
 
   void parse(const QString& path) const;
 
-  mutable QMap<QString, ParsedData> m_parsed;
+  mutable QMap<QString, ParsedData> parsed_;
 };
 
 }  // namespace gui

@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,6 @@
 
 #include <QStyledItemDelegate>
 
-class QProxyStyle;
-
 namespace gui {
 
 class ListItemDelegate final : public QStyledItemDelegate {
@@ -30,7 +28,6 @@ class ListItemDelegate final : public QStyledItemDelegate {
 
 public:
   ListItemDelegate(QObject* parent);
-  ~ListItemDelegate() = default;
 
   void setEditorData(QWidget* editor, const QModelIndex& index) const override;
   QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
@@ -46,9 +43,6 @@ public slots:
                     const QModelIndex& index) const override;
   void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option,
                             const QModelIndex& index) const override;
-
-private:
-  QProxyStyle* m_proxyStyle;
 };
 
 }  // namespace gui

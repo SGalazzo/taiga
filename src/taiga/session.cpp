@@ -32,17 +32,26 @@
 namespace taiga {
 
 QString Session::fileName() const {
-  return u"%1/session.json"_s.arg(get_data_path());
+  return u"%1/session.json"_s.arg(getDataPath());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 int Session::animeListSortColumn() const {
-  return value("animeList.sortColumn", gui::AnimeListModel::COLUMN_TITLE).toInt();
+  return value("animeList.sortColumn", gui::AnimeListModel::ColumnTitle).toInt();
 }
 
 Qt::SortOrder Session::animeListSortOrder() const {
   return value("animeList.sortOrder", Qt::SortOrder::AscendingOrder).value<Qt::SortOrder>();
+}
+
+int Session::animeListSecondarySortColumn() const {
+  return value("animeList.secondarySortColumn", -1).toInt();
+}
+
+Qt::SortOrder Session::animeListSecondarySortOrder() const {
+  return value("animeList.secondarySortOrder", Qt::SortOrder::AscendingOrder)
+      .value<Qt::SortOrder>();
 }
 
 gui::ListViewMode Session::animeListViewMode() const {
@@ -52,6 +61,10 @@ gui::ListViewMode Session::animeListViewMode() const {
 
 QByteArray Session::mainWindowGeometry() const {
   return QByteArray::fromBase64(value("mainWindow.geometry", QByteArray{}).toByteArray());
+}
+
+bool Session::mainWindowTrayNoticeShown() const {
+  return value("mainWindow.trayNoticeShown", false).toBool();
 }
 
 QByteArray Session::mediaDialogGeometry() const {
@@ -91,11 +104,20 @@ gui::AnimeListProxyModelFilter Session::searchListFilters() const {
 }
 
 int Session::searchListSortColumn() const {
-  return value("searchList.sortColumn", gui::AnimeListModel::COLUMN_AVERAGE).toInt();
+  return value("searchList.sortColumn", gui::AnimeListModel::ColumnAverage).toInt();
 }
 
 Qt::SortOrder Session::searchListSortOrder() const {
   return value("searchList.sortOrder", Qt::SortOrder::DescendingOrder).value<Qt::SortOrder>();
+}
+
+int Session::searchListSecondarySortColumn() const {
+  return value("searchList.secondarySortColumn", -1).toInt();
+}
+
+Qt::SortOrder Session::searchListSecondarySortOrder() const {
+  return value("searchList.secondarySortOrder", Qt::SortOrder::AscendingOrder)
+      .value<Qt::SortOrder>();
 }
 
 gui::ListViewMode Session::searchListViewMode() const {
@@ -113,12 +135,24 @@ void Session::setAnimeListSortOrder(const Qt::SortOrder order) const {
   setValue("animeList.sortOrder", order);
 }
 
+void Session::setAnimeListSecondarySortColumn(const int column) const {
+  setValue("animeList.secondarySortColumn", column);
+}
+
+void Session::setAnimeListSecondarySortOrder(const Qt::SortOrder order) const {
+  setValue("animeList.secondarySortOrder", order);
+}
+
 void Session::setAnimeListViewMode(const gui::ListViewMode mode) const {
   setValue("animeList.viewMode", static_cast<int>(mode));
 }
 
 void Session::setMainWindowGeometry(const QByteArray& geometry) const {
   setValue("mainWindow.geometry", geometry.toBase64().toStdString());
+}
+
+void Session::setMainWindowTrayNoticeShown(const bool shown) const {
+  setValue("mainWindow.trayNoticeShown", shown);
 }
 
 void Session::setMediaDialogGeometry(const QByteArray& geometry) const {
@@ -151,6 +185,14 @@ void Session::setSearchListSortColumn(const int column) const {
 
 void Session::setSearchListSortOrder(const Qt::SortOrder order) const {
   setValue("searchList.sortOrder", order);
+}
+
+void Session::setSearchListSecondarySortColumn(const int column) const {
+  setValue("searchList.secondarySortColumn", column);
+}
+
+void Session::setSearchListSecondarySortOrder(const Qt::SortOrder order) const {
+  setValue("searchList.secondarySortOrder", order);
 }
 
 void Session::setSearchListViewMode(const gui::ListViewMode mode) const {

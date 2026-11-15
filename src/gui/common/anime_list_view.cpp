@@ -23,6 +23,7 @@
 
 #include "gui/common/anime_list_item_delegate.hpp"
 #include "gui/common/anime_list_view_base.hpp"
+#include "gui/common/header_view.hpp"
 #include "gui/models/anime_list_model.hpp"
 #include "gui/models/anime_list_proxy_model.hpp"
 #include "gui/utils/painters.hpp"
@@ -32,8 +33,9 @@ namespace gui {
 
 ListView::ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* proxyModel,
                    AnimeListContext context)
-    : m_base(new ListViewBase(parent, this, model, proxyModel, context)) {
+    : base_(new ListViewBase(parent, this, model, proxyModel, context)) {
   setObjectName("animeList");
+  setProperty("themed", true);
 
   setFrameShape(QFrame::Shape::NoFrame);
 
@@ -46,27 +48,29 @@ ListView::ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* 
   setRootIsDecorated(false);
   setUniformRowHeights(true);
 
+  HeaderView::install(this);
+
   header()->setFirstSectionMovable(true);
   header()->setStretchLastSection(false);
   header()->setTextElideMode(Qt::ElideRight);
-  header()->hideSection(AnimeListModel::COLUMN_DURATION);
-  header()->hideSection(AnimeListModel::COLUMN_REWATCHES);
-  header()->hideSection(AnimeListModel::COLUMN_STARTED);
-  header()->hideSection(AnimeListModel::COLUMN_COMPLETED);
-  header()->hideSection(AnimeListModel::COLUMN_NOTES);
+  header()->hideSection(AnimeListModel::ColumnDuration);
+  header()->hideSection(AnimeListModel::ColumnRewatches);
+  header()->hideSection(AnimeListModel::ColumnStarted);
+  header()->hideSection(AnimeListModel::ColumnCompleted);
+  header()->hideSection(AnimeListModel::ColumnNotes);
   if (context == AnimeListContext::Search) {
-    header()->hideSection(AnimeListModel::COLUMN_SCORE);
-    header()->hideSection(AnimeListModel::COLUMN_LAST_UPDATED);
+    header()->hideSection(AnimeListModel::ColumnScore);
+    header()->hideSection(AnimeListModel::ColumnLastUpdated);
   } else {
-    header()->hideSection(AnimeListModel::COLUMN_AVERAGE);
+    header()->hideSection(AnimeListModel::ColumnAverage);
   }
-  header()->resizeSection(AnimeListModel::COLUMN_TITLE, 295);
-  header()->resizeSection(AnimeListModel::COLUMN_PROGRESS, 150);
-  header()->resizeSection(AnimeListModel::COLUMN_DURATION, 75);
-  header()->resizeSection(AnimeListModel::COLUMN_SCORE, 75);
-  header()->resizeSection(AnimeListModel::COLUMN_AVERAGE, 75);
-  header()->resizeSection(AnimeListModel::COLUMN_TYPE, 75);
-  header()->resizeSection(AnimeListModel::COLUMN_LAST_UPDATED, 110);
+  header()->resizeSection(AnimeListModel::ColumnTitle, 295);
+  header()->resizeSection(AnimeListModel::ColumnProgress, 150);
+  header()->resizeSection(AnimeListModel::ColumnDuration, 75);
+  header()->resizeSection(AnimeListModel::ColumnScore, 75);
+  header()->resizeSection(AnimeListModel::ColumnAverage, 85);
+  header()->resizeSection(AnimeListModel::ColumnType, 75);
+  header()->resizeSection(AnimeListModel::ColumnLastUpdated, 110);
 
   // `sortByColumn` needs to be called before `setSortingEnabled`.
   // Otherwise the sort column is set to `0`.
@@ -81,7 +85,7 @@ void ListView::keyPressEvent(QKeyEvent* event) {
   if (event->key() == Qt::Key::Key_Return || event->key() == Qt::Key::Key_Enter) {
     const auto indexes = selectionModel()->selectedRows();
     for (const auto& index : indexes) {
-      m_base->showMediaDialog(index);
+      base_->showMediaDialog(index);
     }
     return;
   }
@@ -94,10 +98,10 @@ void ListView::mousePressEvent(QMouseEvent* event) {
     const QModelIndex index = indexAt(event->pos());
     if (index.isValid()) {
       setCurrentIndex(index);
-      if (m_base->context() == AnimeListContext::Search) {
-        m_base->openAnimePage(index);
+      if (base_->context() == AnimeListContext::Search) {
+        base_->openAnimePage(index);
       } else {
-        m_base->playNextEpisode(index);
+        base_->playNextEpisode(index);
       }
       return;
     }

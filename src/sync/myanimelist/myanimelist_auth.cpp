@@ -20,19 +20,19 @@
 #include <QJsonObject>
 #include <QNetworkRequest>
 #include <QRestReply>
-#include <QUrlQuery>
 
 #include "base/string.hpp"
 #include "myanimelist.hpp"
 #include "sync/myanimelist/myanimelist_error.hpp"
 #include "sync/myanimelist/myanimelist_utils.hpp"
 #include "taiga/accounts.hpp"
+#include "taiga/network.hpp"
 
 namespace sync::myanimelist {
 
-bool Service::retryOnTokenExpiry(QRestReply& reply, std::function<void()> retry) {
+bool Service::retryOnTokenExpiry(QRestReply& reply, const std::function<void()>& retry) {
   if (!isTokenExpired(reply)) return false;
-  refreshAccessToken(std::move(retry));
+  refreshAccessToken(retry);
   return true;
 }
 
@@ -40,13 +40,15 @@ void Service::requestAccessToken(const QString& authorizationCode, const QString
   QNetworkRequest request{QUrl{kTokenUrl}};
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
-  const QUrlQuery body{{
+  // clang-format off
+  const taiga::NameValuePairs body{
       {"client_id", kClientId},
       {"grant_type", "authorization_code"},
       {"code", authorizationCode},
       {"redirect_uri", kRedirectUrl},
       {"code_verifier", codeVerifier},
-  }};
+  };
+  // clang-format on
 
   const auto callback = [this](QRestReply& reply) {
     if (isError(reply)) {
@@ -64,18 +66,18 @@ void Service::requestAccessToken(const QString& authorizationCode, const QString
 
     const auto root = json->object();
     const auto accessToken = root["access_token"].toString();
-    taiga::accounts.setMyanimelistAccessToken(accessToken.toStdString());
-    taiga::accounts.setMyanimelistRefreshToken(root["refresh_token"].toString().toStdString());
+    taiga::accounts()->setMyanimelistAccessToken(accessToken.toStdString());
+    taiga::accounts()->setMyanimelistRefreshToken(root["refresh_token"].toString().toStdString());
     api_.setBearerToken(accessToken.toUtf8());
 
     authenticateUser();
   };
 
-  manager_.post(request, formUrlEncode(body), this, callback);
+  manager_.post(request, taiga::formUrlEncode(body), this, callback);
 }
 
-void Service::refreshAccessToken(std::function<void()> onSuccess) {
-  const auto refreshToken = taiga::accounts.myanimelistRefreshToken();
+void Service::refreshAccessToken(const std::function<void()>& onSuccess) {
+  const auto refreshToken = taiga::accounts()->myanimelistRefreshToken();
 
   if (refreshToken.empty()) {
     emit errorOccurred("Refresh token is unavailable.");
@@ -86,11 +88,11 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
   QNetworkRequest request{QUrl{kTokenUrl}};
   request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
-  const QUrlQuery body{{
+  const taiga::NameValuePairs body{
       {"client_id", kClientId},
       {"grant_type", "refresh_token"},
       {"refresh_token", QString::fromStdString(refreshToken)},
-  }};
+  };
 
   const auto callback = [this, onSuccess](QRestReply& reply) {
     if (isError(reply)) {
@@ -108,14 +110,14 @@ void Service::refreshAccessToken(std::function<void()> onSuccess) {
 
     const auto root = json->object();
     const auto accessToken = root["access_token"].toString();
-    taiga::accounts.setMyanimelistAccessToken(accessToken.toStdString());
-    taiga::accounts.setMyanimelistRefreshToken(root["refresh_token"].toString().toStdString());
+    taiga::accounts()->setMyanimelistAccessToken(accessToken.toStdString());
+    taiga::accounts()->setMyanimelistRefreshToken(root["refresh_token"].toString().toStdString());
     api_.setBearerToken(accessToken.toUtf8());
 
     if (onSuccess) onSuccess();
   };
 
-  manager_.post(request, formUrlEncode(body), this, callback);
+  manager_.post(request, taiga::formUrlEncode(body), this, callback);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -136,7 +138,7 @@ void Service::authenticateUser() {
       return;
     }
 
-    taiga::accounts.setMyanimelistUsername(json->object()["name"].toString().toStdString());
+    taiga::accounts()->setMyanimelistUsername(json->object()["name"].toString().toStdString());
 
     emit authenticationCompleted(true);
   };

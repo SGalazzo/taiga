@@ -47,19 +47,18 @@ bool isValidEpisodeType(const Episode& episode) {
 }
 
 bool isValidEpisodeNumber(const Episode& episode, const anime::Details& item) {
-  if (item.episode_count < 1) {
+  if (item.episodeCount < 1) {
     return true;  // episode count is unknown, so anything goes
   }
 
   const auto range = episode.episodeNumberRange();
 
   if (!range) {
-    if (item.episode_count == 1) {
+    if (item.episodeCount == 1) {
       return true;  // single-episode anime can do without an episode number
     }
 
-    const auto extension = episode.element(anitomy::ElementKind::FileExtension);
-    if (extension.empty()) {
+    if (episode.element(anitomy::ElementKind::FileExtension).empty()) {
       return true;  // batch release
     }
 
@@ -72,7 +71,7 @@ bool isValidEpisodeNumber(const Episode& episode, const anime::Details& item) {
     return false;  // let episode 0 fall through to redirection
   }
 
-  return number <= item.episode_count;
+  return number <= item.episodeCount;
 }
 
 }  // namespace track::recognition

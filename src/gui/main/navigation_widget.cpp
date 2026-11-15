@@ -36,6 +36,7 @@ namespace gui {
 
 NavigationWidget::NavigationWidget(QWidget* parent) : QTreeWidget(parent) {
   setObjectName("navigation");
+  setProperty("themed", true);
   setFixedWidth(200);
   setFrameShape(QFrame::Shape::NoFrame);
   setItemDelegate(new NavigationItemDelegate(this));
@@ -60,7 +61,7 @@ NavigationWidget::NavigationWidget(QWidget* parent) : QTreeWidget(parent) {
     emit currentListStatusChanged(status);
   });
 
-  connect(&sync::queue, &sync::Queue::changed, this, &NavigationWidget::refresh);
+  connect(sync::queue(), &sync::Queue::changed, this, &NavigationWidget::refresh);
 
   const QList<sync::Service*> services{
       sync::anilist::Service::instance(),
@@ -86,7 +87,7 @@ void NavigationWidget::refresh() {
 
   const auto statusCounts = []() {
     QMap<anime::list::Status, int> statuses;
-    for (const auto& entry : anime::db.entries()) {
+    for (const auto& entry : anime::db()->entries()) {
       statuses[entry.status] += 1;
     }
     return statuses;
@@ -101,7 +102,7 @@ void NavigationWidget::refresh() {
   }
 
   auto historyItem = addItem("History", "history", MainWindowPage::History);
-  setItemData(historyItem, NavigationItemDataRole::Counter, sync::queue.count());
+  setItemData(historyItem, NavigationItemDataRole::Counter, sync::queue()->count());
 
   addSeparator();
   addItem("Library", "folder", MainWindowPage::Library);
@@ -133,7 +134,7 @@ QTreeWidgetItem* NavigationWidget::addItem(const QString& text, const QString& i
     return font;
   }());
 
-  item->setIcon(0, theme.getIcon(icon));
+  item->setIcon(0, theme()->getIcon(icon));
   item->setSizeHint(0, QSize{0, 32});
   item->setText(0, text);
 
@@ -145,7 +146,7 @@ QTreeWidgetItem* NavigationWidget::addItem(const QString& text, const QString& i
 QTreeWidgetItem* NavigationWidget::addChildItem(QTreeWidgetItem* parent, const QString& text) {
   auto item = new QTreeWidgetItem(parent);
 
-  item->setIcon(0, theme.getIcon("empty"));  // for indentation
+  item->setIcon(0, theme()->getIcon("empty"));  // for indentation
   item->setSizeHint(0, QSize{0, 32});
   item->setText(0, text);
 

@@ -51,7 +51,6 @@ class MainWindow final : public QMainWindow {
 
 public:
   MainWindow();
-  ~MainWindow() = default;
 
   NavigationWidget* navigation() const;
   NowPlayingWidget* nowPlaying() const;
@@ -61,10 +60,12 @@ public:
 
   void init();
 
+  bool canHideToTray() const;
+
 public slots:
   void addNewFolder();
   void displayWindow();
-  void navigateTo(MainWindowPage page);
+  void navigateTo(gui::MainWindowPage page);
   void navigateToListStatus(anime::list::Status status);
   void updateTitle();
 
@@ -90,16 +91,16 @@ private:
 
   Ui::MainWindow* ui_ = nullptr;
 
-  HistoryWidget* m_historyWidget = nullptr;
-  LibraryWidget* m_libraryWidget = nullptr;
-  ListWidget* m_listWidget = nullptr;
-  NavigationController* m_navigationController = nullptr;
-  NavigationWidget* m_navigationWidget = nullptr;
-  NowPlayingWidget* m_nowPlayingWidget = nullptr;
-  QLineEdit* m_searchBox = nullptr;
-  SearchWidget* m_searchWidget = nullptr;
-  StatusBarController* m_statusBarController = nullptr;
-  TrayIcon* m_trayIcon = nullptr;
+  HistoryWidget* historyWidget_ = nullptr;
+  LibraryWidget* libraryWidget_ = nullptr;
+  ListWidget* listWidget_ = nullptr;
+  NavigationController* navigationController_ = nullptr;
+  NavigationWidget* navigationWidget_ = nullptr;
+  NowPlayingWidget* nowPlayingWidget_ = nullptr;
+  QLineEdit* searchBox_ = nullptr;
+  SearchWidget* searchWidget_ = nullptr;
+  StatusBarController* statusBarController_ = nullptr;
+  TrayIcon* trayIcon_ = nullptr;
 };
 
 MainWindow* mainWindow();

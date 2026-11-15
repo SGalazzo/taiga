@@ -18,9 +18,11 @@
 
 #include "network.hpp"
 
+#include <QCoreApplication>
 #include <QNetworkProxy>
 #include <QNetworkReply>
 #include <QRestReply>
+#include <QUrl>
 
 #include "base/log.hpp"
 #include "base/string.hpp"
@@ -33,20 +35,20 @@ namespace taiga {
 namespace {
 
 QNetworkProxy buildProxy() {
-  const auto host = QString::fromStdString(settings.proxyHost());
+  const auto host = QString::fromStdString(settings()->proxyHost());
   if (host.isEmpty()) return QNetworkProxy{};
 
   QNetworkProxy proxy;
-  proxy.setType(settings.proxyType());
+  proxy.setType(settings()->proxyType());
   proxy.setHostName(host);
-  if (const auto port = settings.proxyPort(); port >= 0) {
+  if (const auto port = settings()->proxyPort(); port >= 0) {
     proxy.setPort(static_cast<quint16>(port));
   }
 
-  if (const auto username = settings.proxyUsername(); !username.empty()) {
+  if (const auto username = settings()->proxyUsername(); !username.empty()) {
     proxy.setUser(QString::fromStdString(username));
   }
-  if (const auto password = settings.proxyPassword(); !password.empty()) {
+  if (const auto password = settings()->proxyPassword(); !password.empty()) {
     proxy.setPassword(QString::fromStdString(password));
   }
 
@@ -59,9 +61,19 @@ NetworkAccessManager::NetworkAccessManager(QObject* parent) : QNetworkAccessMana
   setAutoDeleteReplies(true);
   setTransferTimeout(std::chrono::seconds{10});
 
-  if (const auto proxy = buildProxy(); proxy.type() != QNetworkProxy::DefaultProxy) {
-    setProxy(proxy);
-  }
+  setProxy(buildProxy());
+  connect(settings(), &Settings::changed, this, [this](const QSet<QString>& keys) {
+    // clang-format off
+    static const QSet<QString> relevantKeys{
+        Settings::Key::kProxyType,
+        Settings::Key::kProxyHost,
+        Settings::Key::kProxyPort,
+        Settings::Key::kProxyUsername,
+        Settings::Key::kProxyPassword,
+    };
+    // clang-format on
+    if (keys.intersects(relevantKeys)) setProxy(buildProxy());
+  });
 
   connect(this, &QNetworkAccessManager::finished, this, [](QNetworkReply* reply) {
     if (!app()->isDebug()) return;
@@ -85,6 +97,17 @@ QHttpHeaders NetworkAccessManager::commonHeaders() {
   return headers;
 }
 
+QByteArray formUrlEncode(const NameValuePairs& pairs) {
+  // Unlike `QUrlQuery`, this encodes `+` (decoded as space otherwise) and keeps `%XX` sequences
+  // in values literal.
+  QByteArray result;
+  for (const auto& [name, value] : pairs) {
+    if (!result.isEmpty()) result += '&';
+    result += QUrl::toPercentEncoding(name) + '=' + QUrl::toPercentEncoding(value);
+  }
+  return result;
+}
+
 bool isDdosProtectionActive(const QRestReply& reply) {
   const auto server = reply.networkReply()->rawHeader("Server").toLower();
 
@@ -97,6 +120,11 @@ bool isDdosProtectionActive(const QRestReply& reply) {
     default:
       return false;
   }
+}
+
+NetworkAccessManager* network() {
+  static auto instance = new NetworkAccessManager{qApp};
+  return instance;
 }
 
 }  // namespace taiga

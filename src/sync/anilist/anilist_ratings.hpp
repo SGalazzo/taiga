@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,14 +28,14 @@ struct Rating;
 namespace sync::anilist {
 
 enum class RatingSystem {
-  Point_100,
-  Point_10_Decimal,
-  Point_10,
-  Point_5,
-  Point_3,
+  Point100,
+  Point10Decimal,
+  Point10,
+  Point5,
+  Point3,
 };
 
-constexpr auto kDefaultRatingSystem = RatingSystem::Point_10;
+constexpr auto kDefaultRatingSystem = RatingSystem::Point10;
 
 QList<sync::Rating> ratingList(const RatingSystem ratingSystem);
 

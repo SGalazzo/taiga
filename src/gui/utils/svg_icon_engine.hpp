@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,14 @@
 
 #pragma once
 
+#include <QColor>
 #include <QIconEngine>
 
 namespace gui {
 
 class SvgIconEngine : public QIconEngine {
 public:
-  SvgIconEngine(const QString& iconName);
-  ~SvgIconEngine();
+  SvgIconEngine(QString iconName);
 
   QString key() const override;
   QIconEngine* clone() const override;
@@ -38,9 +38,11 @@ public:
   void paint(QPainter* painter, const QRect& rect, QIcon::Mode mode, QIcon::State state) override;
 
 private:
-  const QString m_iconName;
-  QPixmap m_pixmap;
-  quint64 m_cacheKey{};
+  const QString iconName_;
+  QPixmap pixmap_;
+  quint64 cacheKey_{};
+  QColor color_;
+  QSize size_;
 };
 
 }  // namespace gui

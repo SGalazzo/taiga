@@ -42,7 +42,7 @@ namespace sync::anilist {
 Service::Service() : sync::Service{ServiceId::AniList} {
   api_.setBaseUrl(QUrl{"https://graphql.anilist.co"});
 
-  if (const auto token = taiga::accounts.anilistToken(); !token.empty()) {
+  if (const auto token = taiga::accounts()->anilistToken(); !token.empty()) {
     api_.setBearerToken(QByteArray::fromStdString(token));
   }
 }
@@ -78,7 +78,7 @@ void Service::fetchAnime(const int id) {
       return;
     }
 
-    anime::db.updateItem(*item);
+    anime::db()->updateItem(*item);
   };
 
   manager_.post(api_.createRequest(), data, this, callback);
@@ -125,7 +125,7 @@ void Service::search(const SearchParams& params, const int page) {
     QList<int> ids;
     for (const auto& item : *items) {
       if (!item) continue;
-      anime::db.updateItem(*item);
+      anime::db()->updateItem(*item);
       ids.append(item->id);
     }
 
@@ -143,7 +143,7 @@ void Service::search(const SearchParams& params, const int page) {
 
 void Service::fetchListEntries() {
   const QJsonObject variables{
-      {"userName", QString::fromStdString(taiga::accounts.anilistUsername())},
+      {"userName", QString::fromStdString(taiga::accounts()->anilistUsername())},
   };
 
   const QJsonDocument data{{
@@ -173,7 +173,7 @@ void Service::fetchListEntries() {
     QList<ListEntry> entries;
 
     for (const auto& list : *lists) {
-      for (const auto& entryValue : list.toObject()["entries"].toArray()) {
+      for (const auto& entryValue : list.toObject().value("entries").toArray()) {
         const auto entry = entryValue.toObject();
 
         if (const auto item = parseMedia(entry["media"])) {
@@ -181,12 +181,12 @@ void Service::fetchListEntries() {
         }
         if (const auto listEntry = parseListEntry(entry)) {
           entries.append(*listEntry);
-          fetchedIds.insert(listEntry->anime_id);
+          fetchedIds.insert(listEntry->animeId);
         }
       }
     }
-    anime::db.updateItems(items);
-    anime::db.updateEntries(entries);
+    anime::db()->updateItems(items);
+    anime::db()->updateEntries(entries);
 
     sync::pruneMissingEntries(fetchedIds);
     emit listEntriesFetched();
@@ -202,7 +202,7 @@ void Service::addListEntry(const int id, const anime::list::Fields dirty) {
 }
 
 void Service::deleteListEntry(const int id) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
 
   if (!listEntry) return;
 
@@ -214,23 +214,23 @@ void Service::deleteListEntry(const int id) {
   const auto callback = [this](QRestReply& reply) {
     if (isError(reply) && reply.httpStatus() != 404) {
       handleError(*this, reply);
-      sync::queue.complete(false, "Failed to delete list entry.");
+      sync::queue()->complete(false, "Failed to delete list entry.");
       return;
     }
 
-    sync::queue.complete(true);
+    sync::queue()->complete(true);
   };
 
   manager_.post(api_.createRequest(), data, this, callback);
 }
 
 void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
-  const auto listEntry = anime::db.entry(id);
+  const auto listEntry = anime::db()->entry(id);
 
   if (!listEntry) return;
 
   QJsonObject variables{
-      {"mediaId", listEntry->anime_id},
+      {"mediaId", listEntry->animeId},
   };
 
   if (listEntry->id != anime::list::kUnknownId) {
@@ -244,12 +244,12 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
         listEntry->rewatching ? u"REPEATING"_s : fromListStatus(listEntry->status);
   }
   if (dirty & Field::Score) variables["scoreRaw"] = listEntry->score;
-  if (dirty & Field::Episode) variables["progress"] = listEntry->watched_episodes;
-  if (dirty & Field::RewatchedTimes) variables["repeat"] = listEntry->rewatched_times;
+  if (dirty & Field::Episode) variables["progress"] = listEntry->watchedEpisodes;
+  if (dirty & Field::RewatchedTimes) variables["repeat"] = listEntry->rewatchedTimes;
   if (dirty & Field::Notes) variables["notes"] = QString::fromStdString(listEntry->notes);
-  if (dirty & Field::DateStarted) variables["startedAt"] = fromFuzzyDate(listEntry->date_started);
+  if (dirty & Field::DateStarted) variables["startedAt"] = fromFuzzyDate(listEntry->dateStarted);
   if (dirty & Field::DateCompleted) {
-    variables["completedAt"] = fromFuzzyDate(listEntry->date_completed);
+    variables["completedAt"] = fromFuzzyDate(listEntry->dateCompleted);
   }
 
   const QJsonDocument data{{
@@ -260,7 +260,7 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
   const auto callback = [this](QRestReply& reply) {
     if (isError(reply)) {
       handleError(*this, reply);
-      sync::queue.complete(false, "Failed to update list entry.");
+      sync::queue()->complete(false, "Failed to update list entry.");
       return;
     }
 
@@ -270,17 +270,17 @@ void Service::updateListEntry(const int id, const anime::list::Fields dirty) {
 
     if (!entry) {
       handleError(*this, reply, "Could not parse list entry.");
-      sync::queue.complete(false, "Could not parse list entry.");
+      sync::queue()->complete(false, "Could not parse list entry.");
       return;
     }
 
     if (const auto item = parseMedia((*entry)["media"])) {
-      anime::db.updateItem(*item);
+      anime::db()->updateItem(*item);
     }
     if (const auto listEntry = parseListEntry(*entry)) {
-      sync::queue.complete(*listEntry);
+      sync::queue()->complete(*listEntry);
     } else {
-      sync::queue.complete(true);
+      sync::queue()->complete(true);
     }
   };
 

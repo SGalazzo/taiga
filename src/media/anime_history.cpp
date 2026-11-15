@@ -18,6 +18,7 @@
 
 #include "anime_history.hpp"
 
+#include <QCoreApplication>
 #include <QSqlDatabase>
 #include <algorithm>
 #include <format>
@@ -31,7 +32,7 @@
 
 namespace anime {
 
-History::History() : QObject{} {}
+History::History(QObject* parent) : QObject{parent} {}
 
 void History::init() {
   auto db = QSqlDatabase::database();
@@ -68,7 +69,7 @@ void History::add(const int animeId, const int episode, const std::time_t time) 
 
   items_.append(HistoryItem{
       .id = id,
-      .anime_id = animeId,
+      .animeId = animeId,
       .episode = episode,
       .time = time,
   });
@@ -140,7 +141,7 @@ void History::readItems() {
 }
 
 void History::bindItemToQuery(const HistoryItem& item, QSqlQuery& q) const {
-  q.bindValue(":anime_id", item.anime_id);
+  q.bindValue(":anime_id", item.animeId);
   q.bindValue(":episode", item.episode);
   q.bindValue(":time", static_cast<qlonglong>(item.time));
 }
@@ -148,7 +149,7 @@ void History::bindItemToQuery(const HistoryItem& item, QSqlQuery& q) const {
 HistoryItem History::itemFromQuery(const QSqlQuery& q) const {
   return {
       .id = q.value("id").toInt(),
-      .anime_id = q.value("anime_id").toInt(),
+      .animeId = q.value("anime_id").toInt(),
       .episode = q.value("episode").toInt(),
       .time = static_cast<std::time_t>(q.value("time").toLongLong()),
   };
@@ -162,9 +163,9 @@ void History::migrateFromV1() {
   if (!q.prepare(sql("insertHistory"))) return;
 
   const auto path = []() {
-    const auto service = taiga::settings.service();
-    return std::format("{}/v1/user/{}@{}/history.xml", taiga::get_data_path(),
-                       taiga::accounts.serviceUsername(service), service);
+    const auto service = taiga::settings()->syncService();
+    return std::format("{}/v1/user/{}@{}/history.xml", taiga::getDataPath(),
+                       taiga::accounts()->serviceUsername(service), service);
   }();
 
   db.transaction();
@@ -178,6 +179,11 @@ void History::migrateFromV1() {
 
   db.commit();
   db.close();
+}
+
+History* history() {
+  static auto instance = new History{qApp};
+  return instance;
 }
 
 }  // namespace anime

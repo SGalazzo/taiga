@@ -37,7 +37,9 @@ public:
     Error,
   };
 
-  TrayIcon(QObject* parent, const QIcon& icon, QMenu* menu);
+  TrayIcon(QObject* parent, QIcon icon, QMenu* menu);
+
+  bool isAvailable() const;
 
   void setBadge(Badge badge);
   void showMessage(const QString& title, const QString& message);
@@ -50,10 +52,10 @@ private:
   void updateIcon();
   void paintBadge(QPixmap& pixmap) const;
 
-  Badge m_badge = Badge::None;
-  QIcon m_baseIcon;
-  QMenu* m_contextMenu = nullptr;
-  QSystemTrayIcon* m_icon = nullptr;
+  Badge badge_ = Badge::None;
+  QIcon baseIcon_;
+  QMenu* contextMenu_ = nullptr;
+  QSystemTrayIcon* icon_ = nullptr;
 };
 
 }  // namespace gui

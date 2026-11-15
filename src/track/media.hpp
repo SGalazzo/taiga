@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <QApplication>
 #include <QObject>
 #include <QTimer>
 #include <anisthesia.hpp>
@@ -48,14 +47,13 @@ public:
   bool init();
 
   bool isEnabled() const;
-  void setEnabled(bool enabled);
 
   bool isMediaIdentified() const;
   bool isPlayerFocused() const;
   void setCurrentEpisodeAnimeId(int animeId);
 
 signals:
-  void currentEpisodeChanged(std::optional<Episode> media) const;
+  void currentEpisodeChanged(std::optional<track::Episode> media) const;
 
 private:
   void setPollingEnabled(bool enabled);
@@ -66,6 +64,7 @@ private:
 
   std::optional<Episode> currentEpisode_;
   std::optional<media_t> currentMedia_;
+  std::optional<std::string> currentFile_;
   std::optional<player_t> currentPlayer_;
   void* currentWindowHandle_ = nullptr;
   std::vector<player_t> players_;
@@ -73,9 +72,6 @@ private:
   QTimer* pollTimer_;
 };
 
-inline Detection* detection() {
-  static auto detection = new Detection(qApp);
-  return detection;
-}
+Detection* detection();
 
 }  // namespace track::media

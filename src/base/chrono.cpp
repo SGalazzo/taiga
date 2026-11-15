@@ -1,6 +1,6 @@
 /**
  * Taiga
- * Copyright (C) 2010-2024, Eren Okka
+ * Copyright (C) 2010-2026, Eren Okka
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ FuzzyDate::FuzzyDate(const Date& date)
     : year_{date.year()}, month_{date.month()}, day_{date.day()} {}
 
 FuzzyDate::FuzzyDate(const std::string_view date) {
-  static constexpr auto to_unsigned = [](const std::string_view str) {
+  static constexpr auto toUnsigned = [](const std::string_view str) {
     unsigned_t value{0};
     std::from_chars(str.data(), str.data() + str.size(), value, 10);
     return value;
@@ -75,9 +75,9 @@ FuzzyDate::FuzzyDate(const std::string_view date) {
 
   // Convert from YYYY-MM-DD
   if (date.size() >= 10) {
-    set_year(to_unsigned(date.substr(0, 4)));
-    set_month(to_unsigned(date.substr(5, 2)));
-    set_day(to_unsigned(date.substr(8, 2)));
+    setYear(toUnsigned(date.substr(0, 4)));
+    setMonth(toUnsigned(date.substr(5, 2)));
+    setDay(toUnsigned(date.substr(8, 2)));
   }
 }
 
@@ -95,34 +95,34 @@ std::chrono::days FuzzyDate::operator-(const FuzzyDate& date) const {
 }
 
 std::strong_ordering FuzzyDate::operator<=>(const FuzzyDate& date) const {
-  static constexpr auto fuzzy_compare = [](const auto& lhs, const auto& rhs) {
+  static constexpr auto fuzzyCompare = [](const auto& lhs, const auto& rhs) {
     if (!lhs) return std::strong_ordering::greater;
     if (!rhs) return std::strong_ordering::less;
     return lhs <=> rhs;
   };
 
   if (year() != date.year()) {
-    return fuzzy_compare(year(), date.year());
+    return fuzzyCompare(year(), date.year());
   }
   if (month() != date.month()) {
-    return fuzzy_compare(month(), date.month());
+    return fuzzyCompare(month(), date.month());
   }
   if (day() != date.day()) {
-    return fuzzy_compare(day(), date.day());
+    return fuzzyCompare(day(), date.day());
   }
 
   return std::strong_ordering::equal;
 }
 
 bool FuzzyDate::operator==(const FuzzyDate& date) const {
-  return *this <=> date == std::strong_ordering::equal;
+  return std::is_eq(*this <=> date);
 }
 
 bool FuzzyDate::empty() const {
   return !year() && !month() && !day();
 }
 
-std::string FuzzyDate::to_string() const {
+std::string FuzzyDate::toString() const {
   return std::format("{:0>4}-{:0>2}-{:0>2}", year(), month(), day());  // YYYY-MM-DD
 }
 
@@ -138,15 +138,15 @@ FuzzyDate::unsigned_t FuzzyDate::day() const {
   return static_cast<unsigned_t>(static_cast<unsigned int>(day_));
 }
 
-void FuzzyDate::set_year(unsigned_t year) {
+void FuzzyDate::setYear(unsigned_t year) {
   year_ = std::chrono::year{year};
 }
 
-void FuzzyDate::set_month(unsigned_t month) {
+void FuzzyDate::setMonth(unsigned_t month) {
   month_ = std::chrono::month{month};
 }
 
-void FuzzyDate::set_day(unsigned_t day) {
+void FuzzyDate::setDay(unsigned_t day) {
   day_ = std::chrono::day{day};
 }
 

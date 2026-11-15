@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <QApplication>
 #include <QObject>
 #include <QTimer>
 #include <chrono>
@@ -45,10 +44,11 @@ public:
   void cancel();
 
 signals:
-  void stateChanged(const UpdateState& state) const;
-  void confirmationRequested(const UpdateState& state) const;
+  void stateChanged(const track::UpdateState& state) const;
+  void confirmationRequested(const track::UpdateState& state) const;
 
 private:
+  void loadSettings();
   void onEpisodeChanged(std::optional<Episode> episode);
   void onMediaClosed();
   void tick();
@@ -73,9 +73,6 @@ private:
   QTimer* timer_;
 };
 
-inline UpdateSession* updateSession() {
-  static auto session = new UpdateSession(qApp);
-  return session;
-}
+UpdateSession* updateSession();
 
 }  // namespace track

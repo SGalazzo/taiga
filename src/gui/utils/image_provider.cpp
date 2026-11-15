@@ -18,6 +18,7 @@
 
 #include "image_provider.hpp"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -50,20 +51,20 @@ QString cacheKey(const int id) {
 
 }  // namespace
 
-ImageProvider::ImageProvider() : QObject() {
+ImageProvider::ImageProvider(QObject* parent) : QObject{parent} {
   QPixmapCache::setCacheLimit(kPixmapCacheLimitKb);
 }
 
 void ImageProvider::init() {
-  m_manager = new QRestAccessManager(taiga::network(), this);
+  manager_ = new QRestAccessManager(taiga::network(), this);
 }
 
 void ImageProvider::fetchPoster(const int id, const bool revalidate) {
-  const auto item = anime::db.item(id);
+  const auto item = anime::db()->item(id);
 
-  if (!item || item->image_url.empty()) return;
+  if (!item || item->imageUrl.empty()) return;
 
-  QNetworkRequest request{QString::fromStdString(item->image_url)};
+  QNetworkRequest request{QString::fromStdString(item->imageUrl)};
 
   if (revalidate) {
     if (const QFileInfo file{fileName(id)}; file.exists()) {
@@ -71,13 +72,13 @@ void ImageProvider::fetchPoster(const int id, const bool revalidate) {
     }
   }
 
-  m_manager->get(request, this, [this, id](QRestReply& reply) {
+  manager_->get(request, this, [this, id](QRestReply& reply) {
     if (!reply.isHttpStatusSuccess() || reply.hasError()) {
       if (reply.httpStatus() == 404) {
-        if (const auto item = anime::db.item(id)) {
+        if (const auto item = anime::db()->item(id)) {
           auto updatedItem = *item;
-          updatedItem.image_url.clear();
-          anime::db.updateItem(updatedItem);
+          updatedItem.imageUrl.clear();
+          anime::db()->updateItem(updatedItem);
         }
       }
       return;
@@ -87,7 +88,7 @@ void ImageProvider::fetchPoster(const int id, const bool revalidate) {
     QDir().mkpath(QFileInfo(file).path());
     if (!file.open(QIODevice::WriteOnly)) return;
     file.write(reply.readBody());
-    m_retryAfter.remove(id);
+    retryAfter_.remove(id);
     reloadPoster(id);
   });
 }
@@ -97,11 +98,11 @@ QPixmap ImageProvider::loadPoster(const int id) {
     return pixmap;
   }
 
-  if (m_loading.contains(id) || !canRetry(id)) {
+  if (loading_.contains(id) || !canRetry(id)) {
     return QPixmap{};
   }
 
-  m_loading.insert(id);
+  loading_.insert(id);
 
   const auto future = QtConcurrent::run([fileName = fileName(id)] {
     QImageReader reader(fileName);
@@ -111,7 +112,7 @@ QPixmap ImageProvider::loadPoster(const int id) {
   const auto watcher = new QFutureWatcher<QImage>(this);
   connect(watcher, &QFutureWatcherBase::finished, this, [this, id, watcher]() {
     watcher->deleteLater();
-    m_loading.remove(id);
+    loading_.remove(id);
 
     const QImage image = watcher->result();
 
@@ -136,12 +137,12 @@ void ImageProvider::reloadPoster(const int id) {
 }
 
 QString ImageProvider::fileName(const int id) const {
-  const auto path = QString::fromStdString(taiga::get_data_path());
+  const auto path = QString::fromStdString(taiga::getDataPath());
   const auto service = sync::serviceSlug(sync::currentServiceId());
 
   auto extension = u"jpg"_s;
-  if (const auto item = anime::db.item(id); item && !item->image_url.empty()) {
-    const QUrl url{QString::fromStdString(item->image_url)};
+  if (const auto item = anime::db()->item(id); item && !item->imageUrl.empty()) {
+    const QUrl url{QString::fromStdString(item->imageUrl)};
     if (const auto suffix = QFileInfo(url.path()).suffix(); !suffix.isEmpty()) {
       extension = suffix;
     }
@@ -153,7 +154,7 @@ QString ImageProvider::fileName(const int id) const {
 bool ImageProvider::isStale(const int id) const {
   constexpr int kStaleDays = 7;
 
-  const auto item = anime::db.item(id);
+  const auto item = anime::db()->item(id);
 
   if (!item) return false;
 
@@ -166,13 +167,18 @@ bool ImageProvider::isStale(const int id) const {
 }
 
 bool ImageProvider::canRetry(const int id) const {
-  const auto it = m_retryAfter.find(id);
-  return it == m_retryAfter.end() || QDateTime::currentDateTime() >= it.value();
+  const auto it = retryAfter_.find(id);
+  return it == retryAfter_.end() || QDateTime::currentDateTime() >= it.value();
 }
 
 void ImageProvider::retryAfter(const int id) {
   constexpr int kRetryCooldownSecs = 60;
-  m_retryAfter[id] = QDateTime::currentDateTime().addSecs(kRetryCooldownSecs);
+  retryAfter_[id] = QDateTime::currentDateTime().addSecs(kRetryCooldownSecs);
+}
+
+ImageProvider* imageProvider() {
+  static auto instance = new ImageProvider{qApp};
+  return instance;
 }
 
 }  // namespace gui

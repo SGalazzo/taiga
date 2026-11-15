@@ -25,28 +25,50 @@
 
 namespace gui {
 
+// Colors that differ between light and dark themes. Also used for `@name` placeholders in
+// theme.qss.
+struct ThemeColors {
+  QColor background;
+  QColor border;
+  QColor splitter;
+  QColor itemAlternate;
+  QColor itemHover;
+  QColor itemSelected;
+  QColor itemSelectedInactive;
+  QColor gridLine;
+  QColor secondaryText;
+  QColor progress;
+  QColor success;
+  QColor warning;
+};
+
 class Theme final : public QObject {
   Q_OBJECT
   Q_DISABLE_COPY_MOVE(Theme)
 
 public:
-  Theme();
+  explicit Theme(QObject* parent);
 
   const QIcon& getIcon(const QString& key, const QString& extension = QString{u"svg"},
                        bool useSvgIconEngine = true);
   void initStyle();
   bool isDark() const;
+  bool isFusion() const;
 
+  const ThemeColors& colors() const;
+
+  // Same for both themes, for things drawn outside the app (e.g. the tray icon).
   static QColor errorColor();
   static QColor successColor();
-  static QColor warningColor();
 
 private:
+  void applyStylesheet() const;
   QString readStylesheet(const QString& name) const;
 
-  QHash<QString, QIcon> m_icons;
+  QHash<QString, QIcon> icons_;
+  bool isFusion_ = false;
 };
 
-inline Theme theme;
+Theme* theme();
 
 }  // namespace gui

@@ -17,41 +17,50 @@
  */
 #include "settings_page_application.hpp"
 
+#include <QCheckBox>
 #include <QComboBox>
-#include <QStyleFactory>
+#include <QSystemTrayIcon>
 #include <algorithm>
 
+#include "base/string.hpp"
 #include "taiga/settings.hpp"
 #include "ui_settings_dialog.h"
 
 namespace gui {
 
+namespace {
+
+QString titleExamples(const anime::TitleLanguage language) {
+  switch (language) {
+    default:
+    case anime::TitleLanguage::Romaji:
+      return u"Shingeki no Kyojin"_s;
+    case anime::TitleLanguage::English:
+      return u"Attack on Titan"_s;
+    case anime::TitleLanguage::Native:
+      return u"進撃の巨人"_s;
+  }
+}
+
+}  // namespace
+
 SettingsPageApplication::SettingsPageApplication(Ui::SettingsDialog* ui, QDialog* dialog)
-    : SettingsPage(ui, dialog) {}
+    : SettingsPage(ui, dialog) {
+  connect(ui_->titleLanguageComboBox, &QComboBox::currentIndexChanged, this, [this]() {
+    const auto language =
+        static_cast<anime::TitleLanguage>(ui_->titleLanguageComboBox->currentData().toInt());
+    ui_->titleLanguageHintLabel->setText(tr("e.g. %1").arg(titleExamples(language)));
+  });
+}
 
 void SettingsPageApplication::load() {
-  {
-    auto combo = ui_->styleComboBox;
-    const QString system{taiga::Settings::kAppStyleSystem};
-    auto keys = QStyleFactory::keys();
-    const auto style = QString::fromStdString(taiga::settings.appStyle()).toLower();
-    if (style != system && !keys.contains(style, Qt::CaseInsensitive)) {
-      keys.append(style);  // keep unavailable style
-    }
-    keys.sort(Qt::CaseInsensitive);
-    combo->addItem(tr("System"), system);
-    for (const auto& key : keys) {
-      combo->addItem(key, key.toLower());
-    }
-    combo->setCurrentIndex(std::max(0, combo->findData(style)));
-  }
   {
     auto combo = ui_->colorSchemeComboBox;
     combo->addItem(tr("System"), static_cast<int>(Qt::ColorScheme::Unknown));
     combo->addItem(tr("Light"), static_cast<int>(Qt::ColorScheme::Light));
     combo->addItem(tr("Dark"), static_cast<int>(Qt::ColorScheme::Dark));
     combo->setCurrentIndex(
-        std::max(0, combo->findData(static_cast<int>(taiga::settings.appColorScheme()))));
+        std::max(0, combo->findData(static_cast<int>(taiga::settings()->appColorScheme()))));
   }
   {
     using anime::TitleLanguage;
@@ -60,16 +69,30 @@ void SettingsPageApplication::load() {
     combo->addItem(tr("English"), static_cast<int>(TitleLanguage::English));
     combo->addItem(tr("Native"), static_cast<int>(TitleLanguage::Native));
     combo->setCurrentIndex(
-        std::max(0, combo->findData(static_cast<int>(taiga::settings.titleLanguage()))));
+        std::max(0, combo->findData(static_cast<int>(taiga::settings()->appTitleLanguage()))));
+  }
+  ui_->hideNsfwCheckBox->setChecked(taiga::settings()->appHideNsfw());
+  {
+    ui_->closeToTrayCheckBox->setChecked(taiga::settings()->appCloseToTray());
+    ui_->startInTrayCheckBox->setChecked(taiga::settings()->appStartInTray());
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+      ui_->behaviorGroupBox->setDisabled(true);
+      ui_->behaviorGroupBox->setToolTip(tr("The system tray is not available."));
+    }
   }
 }
 
 void SettingsPageApplication::apply() const {
-  taiga::settings.setAppStyle(ui_->styleComboBox->currentData().toString().toStdString());
-  taiga::settings.setAppColorScheme(
+  taiga::settings()->setAppColorScheme(
       static_cast<Qt::ColorScheme>(ui_->colorSchemeComboBox->currentData().toInt()));
-  taiga::settings.setTitleLanguage(
+
+  taiga::settings()->setAppTitleLanguage(
       static_cast<anime::TitleLanguage>(ui_->titleLanguageComboBox->currentData().toInt()));
+
+  taiga::settings()->setAppHideNsfw(ui_->hideNsfwCheckBox->isChecked());
+
+  taiga::settings()->setAppCloseToTray(ui_->closeToTrayCheckBox->isChecked());
+  taiga::settings()->setAppStartInTray(ui_->startInTrayCheckBox->isChecked());
 }
 
 }  // namespace gui
