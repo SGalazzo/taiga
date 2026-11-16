@@ -28,6 +28,7 @@
 #include "gui/library/library_menu.hpp"
 #include "gui/main/main_window.hpp"
 #include "gui/models/library_model.hpp"
+#include "gui/utils/painters.hpp"
 #include "gui/utils/theme.hpp"
 #include "taiga/settings.hpp"
 #include "ui_main_window.h"
@@ -67,10 +68,10 @@ LibraryWidget::LibraryWidget(QWidget* parent)
   }
 
   view_->installEventFilter(this);
+  view_->viewport()->installEventFilter(this);
   view_->setObjectName("libraryView");
   view_->setProperty("themed", true);
   view_->setFrameShape(QFrame::Shape::NoFrame);
-  view_->setModel(model_);
   view_->setAlternatingRowColors(true);
   view_->setAllColumnsShowFocus(true);
   view_->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -86,15 +87,7 @@ LibraryWidget::LibraryWidget(QWidget* parent)
   view_->header()->setSectionsMovable(false);
   view_->header()->setStretchLastSection(false);
   view_->header()->setTextElideMode(Qt::ElideRight);
-  view_->header()->hideSection(LibraryModel::ColumnType);
   view_->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-  view_->header()->setSectionResizeMode(LibraryModel::ColumnName, QHeaderView::Stretch);
-  view_->header()->setSectionResizeMode(LibraryModel::ColumnAnime, QHeaderView::Stretch);
-  view_->header()->moveSection(LibraryModel::ColumnAnime, 1);
-  view_->header()->moveSection(LibraryModel::ColumnEpisode, 2);
-
-  view_->sortByColumn(LibraryModel::ColumnName, Qt::SortOrder::AscendingOrder);
-  view_->setSortingEnabled(true);
 
   layout()->addWidget(view_);
 
@@ -116,6 +109,11 @@ LibraryWidget::LibraryWidget(QWidget* parent)
 }
 
 bool LibraryWidget::eventFilter(QObject* watched, QEvent* event) {
+  if (watched == view_->viewport() && event->type() == QEvent::Paint && !view_->model()) {
+    paintEmptyListText(view_, tr("Add a library folder in Settings to see your anime files."));
+    return true;
+  }
+
   if (watched == view_ && event->type() == QEvent::KeyPress) {
     const auto* keyEvent = static_cast<QKeyEvent*>(event);
     const auto index = view_->currentIndex();
@@ -153,7 +151,29 @@ void LibraryWidget::refreshFolders() {
   }
 
   comboRoot_->setDisabled(folders.empty());
+
+  // Without a library folder the model would show the whole computer, where files could then be
+  // moved or deleted.
+  if (folders.empty()) {
+    view_->setModel(nullptr);
+    return;
+  }
+  if (!view_->model()) setModel();
+
   view_->setRootIndex(model_->setRootPath(comboRoot_->currentText()));
+}
+
+void LibraryWidget::setModel() {
+  // Setting a model resets the header sections.
+  view_->setModel(model_);
+  view_->header()->hideSection(LibraryModel::ColumnType);
+  view_->header()->setSectionResizeMode(LibraryModel::ColumnName, QHeaderView::Stretch);
+  view_->header()->setSectionResizeMode(LibraryModel::ColumnAnime, QHeaderView::Stretch);
+  view_->header()->moveSection(LibraryModel::ColumnAnime, 1);
+  view_->header()->moveSection(LibraryModel::ColumnEpisode, 2);
+
+  view_->sortByColumn(LibraryModel::ColumnName, Qt::SortOrder::AscendingOrder);
+  view_->setSortingEnabled(true);
 }
 
 void LibraryWidget::showContextMenu() const {
