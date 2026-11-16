@@ -142,6 +142,9 @@ QVariant AnimeListModel::data(const QModelIndex& index, int role) const {
       switch (index.column()) {
         case ColumnTitle:
           return QString::fromStdString(anime::preferredTitle(*anime));
+        case ColumnScore:
+          if (entry && entry->score) return formatRating(entry->score);
+          break;
         case ColumnSeason:
           return formatFuzzyDate(anime->dateStarted);
         case ColumnLastUpdated:
