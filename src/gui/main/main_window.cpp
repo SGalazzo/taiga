@@ -119,6 +119,8 @@ void MainWindow::init() {
 void MainWindow::initActions() {
   ui_->actionProfile->setToolTip(tr("Profile"));
   ui_->actionProfile->setDisabled(true);  // placeholder
+  ui_->actionPlayNextEpisode->setDisabled(true);  // placeholder
+  ui_->actionPlayRandomAnime->setDisabled(true);  // placeholder
   ui_->actionSynchronize->setToolTip(
       tr("Synchronize with %1").arg(sync::serviceName(sync::currentServiceId())));
 
