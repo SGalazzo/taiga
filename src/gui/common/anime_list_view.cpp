@@ -20,6 +20,8 @@
 
 #include <QHeaderView>
 #include <QKeyEvent>
+#include <QScrollBar>
+#include <algorithm>
 
 #include "gui/common/anime_list_item_delegate.hpp"
 #include "gui/common/anime_list_view_base.hpp"
@@ -30,6 +32,10 @@
 #include "track/play.hpp"
 
 namespace gui {
+
+namespace {
+constexpr int kMinTitleWidth = 295;
+}
 
 ListView::ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* proxyModel,
                    AnimeListContext context)
@@ -64,10 +70,10 @@ ListView::ListView(QWidget* parent, AnimeListModel* model, AnimeListProxyModel* 
   } else {
     header()->hideSection(AnimeListModel::ColumnAverage);
   }
-  header()->resizeSection(AnimeListModel::ColumnTitle, 295);
+  header()->resizeSection(AnimeListModel::ColumnTitle, kMinTitleWidth);
   header()->resizeSection(AnimeListModel::ColumnProgress, 150);
   header()->resizeSection(AnimeListModel::ColumnDuration, 75);
-  header()->resizeSection(AnimeListModel::ColumnScore, 75);
+  header()->resizeSection(AnimeListModel::ColumnScore, 110);
   header()->resizeSection(AnimeListModel::ColumnAverage, 85);
   header()->resizeSection(AnimeListModel::ColumnType, 75);
   header()->resizeSection(AnimeListModel::ColumnLastUpdated, 110);
@@ -116,6 +122,20 @@ void ListView::paintEvent(QPaintEvent* event) {
   }
 
   QTreeView::paintEvent(event);
+}
+
+void ListView::resizeEvent(QResizeEvent* event) {
+  QTreeView::resizeEvent(event);
+
+  // Give the title any width that the other columns don't use. Room is kept for a vertical scroll
+  // bar, so that one appearing later doesn't add a horizontal one.
+  const int scrollBarWidth =
+      verticalScrollBar()->isVisible() ? 0 : verticalScrollBar()->sizeHint().width();
+  const int otherColumnsWidth =
+      header()->length() - header()->sectionSize(AnimeListModel::ColumnTitle);
+  header()->resizeSection(
+      AnimeListModel::ColumnTitle,
+      std::max(kMinTitleWidth, viewport()->width() - scrollBarWidth - otherColumnsWidth));
 }
 
 }  // namespace gui
