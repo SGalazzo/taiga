@@ -17,17 +17,17 @@ private slots:
 
   void rewatchingCompletedEntryKeepsProgress() {
     constexpr int kId = 1;
-    anime::db.updateItem(test::makeAnime(kId, 24));
+    anime::db()->updateItem(test::makeAnime(kId, 24));
 
     ListEntry entry;
-    entry.anime_id = kId;
+    entry.animeId = kId;
     entry.status = anime::list::Status::Completed;
     entry.rewatching = true;
-    entry.watched_episodes = 12;
-    anime::db.updateEntry(entry);
+    entry.watchedEpisodes = 12;
+    anime::db()->updateEntry(entry);
 
     gui::MediaDialog dialog(nullptr);
-    dialog.setAnime(*anime::db.item(kId));
+    dialog.setAnime(*anime::db()->item(kId));
 
     const auto* check = dialog.findChild<QCheckBox*>("checkRewatching");
     const auto* progress = dialog.findChild<QSpinBox*>("spinProgress");
@@ -38,17 +38,17 @@ private slots:
 
   void userTogglingRewatchingStillResetsProgress() {
     constexpr int kId = 2;
-    anime::db.updateItem(test::makeAnime(kId, 24));
+    anime::db()->updateItem(test::makeAnime(kId, 24));
 
     ListEntry entry;
-    entry.anime_id = kId;
+    entry.animeId = kId;
     entry.status = anime::list::Status::Completed;
     entry.rewatching = false;
-    entry.watched_episodes = 24;
-    anime::db.updateEntry(entry);
+    entry.watchedEpisodes = 24;
+    anime::db()->updateEntry(entry);
 
     gui::MediaDialog dialog(nullptr);
-    dialog.setAnime(*anime::db.item(kId));
+    dialog.setAnime(*anime::db()->item(kId));
 
     auto* check = dialog.findChild<QCheckBox*>("checkRewatching");
     const auto* progress = dialog.findChild<QSpinBox*>("spinProgress");

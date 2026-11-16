@@ -29,16 +29,16 @@ private slots:
     QFETCH(float, expected);
 
     anime::Details item;
-    item.episode_count = episodes;
+    item.episodeCount = episodes;
     anime::list::Entry entry;
-    entry.watched_episodes = watched;
+    entry.watchedEpisodes = watched;
 
     QCOMPARE(getProgressRatio(&item, &entry), expected);
   }
 
   void notInList() {
     anime::Details item;
-    item.episode_count = 0;
+    item.episodeCount = 0;
     QCOMPARE(getProgressRatio(&item, nullptr), 0.0f);
   }
 };

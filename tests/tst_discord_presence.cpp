@@ -22,8 +22,8 @@ void addAnime(const int id, const std::string& title, const int episodes,
               const std::string& imageUrl = "https://cdn.example/poster.jpg") {
   auto item = test::makeAnime(id, episodes);
   item.titles.romaji = title;
-  item.image_url = imageUrl;
-  anime::db.updateItem(item);
+  item.imageUrl = imageUrl;
+  anime::db()->updateItem(item);
 }
 
 std::optional<QJsonObject> build(const int id, std::optional<std::pair<int, int>> range,
@@ -82,9 +82,9 @@ private slots:
   void privateEntryIsNotShared() {
     addAnime(4, "Secret Show", 12);
     ListEntry entry;
-    entry.anime_id = 4;
-    entry.is_private = true;
-    anime::db.updateEntry(entry);
+    entry.animeId = 4;
+    entry.isPrivate = true;
+    anime::db()->updateEntry(entry);
     QVERIFY(!build(4, std::pair{1, 1}));
   }
 

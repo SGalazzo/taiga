@@ -30,11 +30,11 @@ private slots:
     const auto hit = r.find(10001, 14);
     QVERIFY(hit.has_value());
     QCOMPARE(hit->id, 20001);
-    QCOMPARE(hit->episode_range.first, 1);
+    QCOMPARE(hit->episodeRange.first, 1);
 
     const auto last = r.find(10001, 26);
     QVERIFY(last.has_value());
-    QCOMPARE(last->episode_range.first, 13);
+    QCOMPARE(last->episodeRange.first, 13);
 
     QVERIFY(!r.find(10001, 13).has_value());
     QVERIFY(!r.find(10001, 27).has_value());
@@ -54,7 +54,7 @@ private slots:
     const auto hit = r.find(100, 13);
     QVERIFY(hit.has_value());
     QCOMPARE(hit->id, 100);
-    QCOMPARE(hit->episode_range.first, 0);
+    QCOMPARE(hit->episodeRange.first, 0);
   }
 
   void unknownSourceIdIsSkipped() {
@@ -67,7 +67,7 @@ private slots:
     const auto self = r.find(2, 14);
     QVERIFY(self.has_value());
     QCOMPARE(self->id, 2);
-    QCOMPARE(self->episode_range.first, 1);
+    QCOMPARE(self->episodeRange.first, 1);
   }
 
   void openEndedRange() {
@@ -75,7 +75,7 @@ private slots:
     const auto hit = r.find(5, 40);
     QVERIFY(hit.has_value());
     QCOMPARE(hit->id, 6);
-    QCOMPARE(hit->episode_range.first, 28);
+    QCOMPARE(hit->episodeRange.first, 28);
   }
 
   void realFileParsesAndRedirects() {

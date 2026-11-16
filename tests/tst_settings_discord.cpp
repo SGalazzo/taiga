@@ -17,7 +17,7 @@ class TestSettingsDiscord : public QObject {
 private slots:
   void initTestCase() { test::initCore("myanimelist"); }
 
-  void disabledByDefault() { QVERIFY(!taiga::settings.discordEnabled()); }
+  void disabledByDefault() { QVERIFY(!taiga::settings()->discordEnabled()); }
 
   void checkboxReflectsSettings() {
     // Applying would contact the real Discord app, so only loading is tested here.
@@ -26,8 +26,8 @@ private slots:
       QVERIFY(!dialog.findChild<QCheckBox*>("discordEnabledCheckBox")->isChecked());
       QVERIFY(dialog.findChild<QGroupBox*>("discordGroupBox")->isEnabled());
     }
-    taiga::settings.setDiscordEnabled(true);
-    taiga::settings.setSharingEnabled(false);
+    taiga::settings()->setDiscordEnabled(true);
+    taiga::settings()->setSharingEnabled(false);
     {
       gui::SettingsDialog dialog(nullptr);
       QVERIFY(dialog.findChild<QCheckBox*>("discordEnabledCheckBox")->isChecked());
@@ -36,12 +36,12 @@ private slots:
       dialog.findChild<QCheckBox*>("sharingEnabledCheckBox")->setChecked(true);
       QVERIFY(group->isEnabled());
     }
-    taiga::settings.setDiscordEnabled(false);
-    taiga::settings.setSharingEnabled(true);
+    taiga::settings()->setDiscordEnabled(false);
+    taiga::settings()->setSharingEnabled(true);
   }
 
   void importedFromV1() {
-    const auto path = QString::fromStdString(taiga::get_data_path()) + u"/v1-settings.xml"_s;
+    const auto path = QString::fromStdString(taiga::getDataPath()) + u"/v1-settings.xml"_s;
     QFile file{path};
     QVERIFY(file.open(QIODevice::WriteOnly));
     file.write(R"(<?xml version="1.0" encoding="UTF-8"?>
@@ -57,10 +57,10 @@ private slots:
 )");
     file.close();
 
-    taiga::settings.setDiscordEnabled(false);
-    compat::v1::readSettings(path.toStdString(), taiga::settings, taiga::accounts);
-    QVERIFY(taiga::settings.discordEnabled());
-    taiga::settings.setDiscordEnabled(false);
+    taiga::settings()->setDiscordEnabled(false);
+    compat::v1::readSettings(path.toStdString(), *taiga::settings(), *taiga::accounts());
+    QVERIFY(taiga::settings()->discordEnabled());
+    taiga::settings()->setDiscordEnabled(false);
   }
 };
 

@@ -17,21 +17,21 @@ private slots:
   void initTestCase() {
     QVERIFY(m_blackhole.listen(QHostAddress::LocalHost));  // nothing leaves this machine
     test::initCore("anilist");
-    taiga::settings.setSyncEnabled(false);
-    taiga::settings.setProxyType(QNetworkProxy::HttpProxy);
-    taiga::settings.setProxyHost("127.0.0.1");
-    taiga::settings.setProxyPort(m_blackhole.serverPort());
+    taiga::settings()->setSyncEnabled(false);
+    taiga::settings()->setProxyType(QNetworkProxy::HttpProxy);
+    taiga::settings()->setProxyHost("127.0.0.1");
+    taiga::settings()->setProxyPort(m_blackhole.serverPort());
     QObject::disconnect(taiga::network(), &QNetworkAccessManager::finished, nullptr, nullptr);
 
-    taiga::accounts.setAnilistAuthenticated(false);
-    taiga::accounts.setMyanimelistAuthenticated(false);
+    taiga::accounts()->setAnilistAuthenticated(false);
+    taiga::accounts()->setMyanimelistAuthenticated(false);
   }
 
   void resultAppliesToReportingService() {
     emit sync::myanimelist::Service::instance()->authenticationCompleted(true);
 
-    QVERIFY(taiga::accounts.myanimelistAuthenticated());
-    QVERIFY(!taiga::accounts.anilistAuthenticated());
+    QVERIFY(taiga::accounts()->myanimelistAuthenticated());
+    QVERIFY(!taiga::accounts()->anilistAuthenticated());
   }
 
 private:

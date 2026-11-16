@@ -20,42 +20,42 @@ private slots:
     // machine and the test decides each outcome with complete().
     QVERIFY(m_blackhole.listen(QHostAddress::LocalHost));
     test::initCore("myanimelist");
-    taiga::settings.setSyncEnabled(false);
-    taiga::settings.setProxyType(QNetworkProxy::HttpProxy);
-    taiga::settings.setProxyHost("127.0.0.1");
-    taiga::settings.setProxyPort(m_blackhole.serverPort());
+    taiga::settings()->setSyncEnabled(false);
+    taiga::settings()->setProxyType(QNetworkProxy::HttpProxy);
+    taiga::settings()->setProxyHost("127.0.0.1");
+    taiga::settings()->setProxyPort(m_blackhole.serverPort());
     QObject::disconnect(taiga::network(), &QNetworkAccessManager::finished, nullptr, nullptr);
 
-    taiga::accounts.setMyanimelistUsername("test");
-    taiga::accounts.setMyanimelistAccessToken("not-a-real-token");
-    taiga::accounts.setMyanimelistAuthenticated(true);
+    taiga::accounts()->setMyanimelistUsername("test");
+    taiga::accounts()->setMyanimelistAccessToken("not-a-real-token");
+    taiga::accounts()->setMyanimelistAuthenticated(true);
 
-    sync::queue.init();
+    sync::queue()->init();
   }
 
   void failedItemDoesNotBlockOthers() {
     for (const int id : {1, 2}) {
-      anime::db.updateItem(test::makeAnime(id, 12));
+      anime::db()->updateItem(test::makeAnime(id, 12));
       ListEntry entry;
-      entry.anime_id = id;
+      entry.animeId = id;
       entry.status = anime::list::Status::Watching;
-      entry.watched_episodes = id;
-      anime::db.updateEntry(entry);
-      sync::queue.push(id, anime::list::Field::Episode);
+      entry.watchedEpisodes = id;
+      anime::db()->updateEntry(entry);
+      sync::queue()->push(id, anime::list::Field::Episode);
     }
 
-    QSignalSpy processing(&sync::queue, &sync::Queue::processing);
+    QSignalSpy processing(sync::queue(), &sync::Queue::processing);
 
-    sync::queue.process();
+    sync::queue()->process();
     QCOMPARE(processing.last().first().toInt(), 1);
-    sync::queue.complete(false, "Rejected.");  // the service keeps rejecting this one
+    sync::queue()->complete(false, "Rejected.");  // the service keeps rejecting this one
 
-    sync::queue.process();
+    sync::queue()->process();
     QCOMPARE(processing.last().first().toInt(), 2);  // not stuck behind anime 1
 
-    sync::queue.complete(true);  // anime 2 goes through, then anime 1 is retried
+    sync::queue()->complete(true);  // anime 2 goes through, then anime 1 is retried
     QCOMPARE(processing.last().first().toInt(), 1);
-    QCOMPARE(sync::queue.count(), 1);
+    QCOMPARE(sync::queue()->count(), 1);
   }
 
 private:

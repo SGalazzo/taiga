@@ -48,7 +48,7 @@ private slots:
 
   void fractionalEpisodeIsNotWatched() {
     anime::Details item;
-    item.episode_count = 12;
+    item.episodeCount = 12;
 
     const auto decision = track::decideUpdate(makeEpisode({"7.5"}), item, nullptr, false);
     QCOMPARE(decision.action, track::UpdateDecision::Action::Deny);
@@ -57,7 +57,7 @@ private slots:
 
   void suffixedEpisodeIsWatched() {
     anime::Details item;
-    item.episode_count = 12;
+    item.episodeCount = 12;
 
     QCOMPARE(track::watchedEpisodeNumber(makeEpisode({"4a"}), item), 4);
   }

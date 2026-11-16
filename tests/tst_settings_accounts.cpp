@@ -15,7 +15,7 @@ class TestSettingsAccounts : public QObject {
 private slots:
   void initTestCase() {
     test::initCore("myanimelist");
-    taiga::accounts.setMyanimelistUsername("Vash");
+    taiga::accounts()->setMyanimelistUsername("Vash");
   }
 
   void authorizeButtonInMyAnimeListGroup() {

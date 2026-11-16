@@ -13,7 +13,7 @@ namespace {
 // A database created by an earlier build: anime_list keyed by the service's entry id.
 bool createOldSchema(const QString& rows) {
   test::resetDataDir();
-  const auto file = QString::fromStdString(taiga::get_data_path()) + "/media.sqlite";
+  const auto file = QString::fromStdString(taiga::getDataPath()) + "/media.sqlite";
   bool ok = false;
   {
     auto db = QSqlDatabase::addDatabase("QSQLITE", "old");
@@ -45,41 +45,41 @@ private slots:
 
     QList<ListEntry> entries;
     for (int id = 1; id <= 3; ++id) {
-      anime::db.updateItem(test::makeAnime(id, 12));
+      anime::db()->updateItem(test::makeAnime(id, 12));
       ListEntry entry;  // entry.id stays kUnknownId, as MyAnimeList's parser leaves it
-      entry.anime_id = id;
+      entry.animeId = id;
       entry.status = anime::list::Status::Watching;
-      entry.watched_episodes = id;
+      entry.watchedEpisodes = id;
       entries.push_back(entry);
     }
-    anime::db.updateEntries(entries);
-    QCOMPARE(anime::db.entries().size(), 3);  // in memory
+    anime::db()->updateEntries(entries);
+    QCOMPARE(anime::db()->entries().size(), 3);  // in memory
 
-    anime::Database reloaded;  // same file, as after an application restart
+    anime::Database reloaded{nullptr};  // same file, as after an application restart
     reloaded.init();
     QCOMPARE(reloaded.entries().size(), 3);
-    QCOMPARE(reloaded.entry(2)->watched_episodes, 2);
+    QCOMPARE(reloaded.entry(2)->watchedEpisodes, 2);
   }
 
   void oldSchemaIsMigrated() {
     QVERIFY(createOldSchema("VALUES(101, 1, 5, 1, NULL), (102, 2, 7, 1, NULL)"));
 
-    anime::Database migrated;
+    anime::Database migrated{nullptr};
     migrated.init();
     QCOMPARE(migrated.entries().size(), 2);
-    QCOMPARE(migrated.entry(2)->watched_episodes, 7);
+    QCOMPARE(migrated.entry(2)->watchedEpisodes, 7);
     QCOMPARE(migrated.entry(2)->id, 102);
 
     // New key: one row per anime, even when the service entry id is unknown.
     QList<ListEntry> entries;
     for (int id = 3; id <= 4; ++id) {
       ListEntry entry;
-      entry.anime_id = id;
+      entry.animeId = id;
       entries.push_back(entry);
     }
     migrated.updateEntries(entries);
 
-    anime::Database reloaded;
+    anime::Database reloaded{nullptr};
     reloaded.init();
     QCOMPARE(reloaded.entries().size(), 4);
   }
@@ -88,11 +88,11 @@ private slots:
     // Same anime twice; the row with the higher id is the older one.
     QVERIFY(createOldSchema("VALUES(201, 9, 3, 1, '1700000100'), (202, 9, 2, 1, '1700000000')"));
 
-    anime::Database migrated;
+    anime::Database migrated{nullptr};
     migrated.init();
     QCOMPARE(migrated.entries().size(), 1);
     QCOMPARE(migrated.entry(9)->id, 201);
-    QCOMPARE(migrated.entry(9)->watched_episodes, 3);
+    QCOMPARE(migrated.entry(9)->watchedEpisodes, 3);
   }
 };
 
