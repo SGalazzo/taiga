@@ -195,7 +195,7 @@ void Detection::poll() {
   }
 
   const auto index = chooseCandidate(candidates, currentWindowHandle_);
-  if (!index) {
+  if (!index || !resolved[*index]) {
     reset();
     return;
   }
