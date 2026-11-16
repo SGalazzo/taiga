@@ -167,6 +167,16 @@ bool Settings::streamingDetectionEnabled() const {
   return value(Key::kStreamingDetectionEnabled, false).toBool();
 }
 
+std::vector<std::string> Settings::streamingSites() const {
+  return value(Key::kStreamingSites).toJsonArray().toVariantList() |
+         std::views::transform([](const QVariant& v) { return v.toString().toStdString(); }) |
+         std::ranges::to<std::vector>();
+}
+
+bool Settings::streamingSitesOnly() const {
+  return value(Key::kStreamingSitesOnly, false).toBool();
+}
+
 bool Settings::syncEnabled() const {
   return value(Key::kSyncEnabled, true).toBool();
 }
@@ -306,6 +316,14 @@ void Settings::setSharingEnabled(const bool enabled) const {
 
 void Settings::setStreamingDetectionEnabled(const bool enabled) const {
   setValue(Key::kStreamingDetectionEnabled, enabled);
+}
+
+void Settings::setStreamingSites(const std::vector<std::string>& sites) const {
+  setValue(Key::kStreamingSites, QJsonArray::fromStringList(toStringList(sites)));
+}
+
+void Settings::setStreamingSitesOnly(const bool enabled) const {
+  setValue(Key::kStreamingSitesOnly, enabled);
 }
 
 void Settings::setSyncEnabled(const bool enabled) const {

@@ -67,6 +67,8 @@ public:
     static constexpr QLatin1StringView kDetectionInterval{"track.detection.interval"};
     static constexpr QLatin1StringView kStreamingDetectionEnabled{
         "track.detection.streaming.enabled"};
+    static constexpr QLatin1StringView kStreamingSites{"track.detection.streaming.sites"};
+    static constexpr QLatin1StringView kStreamingSitesOnly{"track.detection.streaming.sitesOnly"};
     static constexpr QLatin1StringView kUpdateDelay{"track.update.delay"};
     static constexpr QLatin1StringView kUpdateLibraryOnly{"track.update.libraryOnly"};
     static constexpr QLatin1StringView kUpdatePauseWhenUnfocused{"track.update.pauseWhenUnfocused"};
@@ -95,6 +97,8 @@ public:
   std::string proxyPassword() const;
   bool sharingEnabled() const;
   bool streamingDetectionEnabled() const;
+  std::vector<std::string> streamingSites() const;
+  bool streamingSitesOnly() const;
   bool syncEnabled() const;
   std::string syncService() const;
   std::chrono::seconds updateDelay() const;
@@ -123,6 +127,8 @@ public:
   void setProxyPassword(const std::string& password) const;
   void setSharingEnabled(const bool enabled) const;
   void setStreamingDetectionEnabled(const bool enabled) const;
+  void setStreamingSites(const std::vector<std::string>& sites) const;
+  void setStreamingSitesOnly(const bool enabled) const;
   void setSyncEnabled(const bool enabled) const;
   void setSyncService(const std::string& service) const;
   void setUpdateDelay(const std::chrono::seconds delay) const;

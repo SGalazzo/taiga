@@ -30,6 +30,7 @@
 #include "taiga/settings.hpp"
 #include "track/episode.hpp"
 #include "track/media_player.hpp"
+#include "track/media_stream.hpp"
 #include "track/recognition.hpp"
 
 namespace track::media {
@@ -168,8 +169,9 @@ void Detection::poll() {
 #ifdef Q_OS_WINDOWS
   const auto players = getEnabledPlayers(players_);
 
-  static const auto mediaProc = [](const anisthesia::MediaInfo&) {
-    return true;  // Accept all media
+  static const auto mediaProc = [](const anisthesia::MediaInfo& information) {
+    // Titles of a web browser's other tabs are not needed.
+    return information.type != anisthesia::MediaInfoType::Tab;
   };
 
   std::vector<anisthesia::win::Result> results;
@@ -178,32 +180,103 @@ void Detection::poll() {
     return;
   }
 
-  const auto resultIt = std::ranges::find_if(results, [this](const anisthesia::win::Result& r) {
-    return r.window.handle == currentWindowHandle_;
-  });
-  const auto& result = resultIt != results.end() ? *resultIt : results.front();
+  // Web browsers show all kinds of pages, so only episodes of a known anime are considered there,
+  // unless the user has limited detection to their streaming sites.
+  // An empty list would hide every page, so it counts as not set.
+  const auto sites = taiga::settings()->streamingSitesOnly() ? taiga::settings()->streamingSites()
+                                                             : std::vector<std::string>{};
+  const bool sitesOnly = !sites.empty();
+  const auto resolveBrowserPage = [&](const anisthesia::win::Result& result,
+                                      const MediaFields& fields) -> std::optional<ResolvedMedia> {
+    if (isPrivateBrowserWindow(QString::fromStdWString(result.window.text).toStdString())) {
+      return std::nullopt;
+    }
 
-  currentPlayer_ = result.player;
-  currentMedia_ = flattenMedia(result);
-  currentWindowHandle_ = result.window.handle;
+    // Pages without an episode number are too likely to be something else (e.g. an article).
+    auto entry = resolveMedia(fields);
+    if (!entry || !entry->episode.episodeNumberRange()) return std::nullopt;
 
-  auto resolved = resolveMedia(extractMediaFields(*currentMedia_));
-  if (!resolved) {
+    entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+
+    if (!sitesOnly) {
+      if (entry->episode.animeId() == anime::kUnknownId) return std::nullopt;
+    } else if (fields.url.empty()) {
+      // The address is not always available (e.g. in full screen), so keep the episode that was
+      // already accepted in this window.
+      if (result.window.handle != currentWindowHandle_ || hasEpisodeChanged(entry->episode)) {
+        return std::nullopt;
+      }
+    } else if (!isStreamingSiteUrl(fields.url, sites)) {
+      return std::nullopt;
+    }
+
+    return entry;
+  };
+
+  // Every window is checked, so that a window showing something else (e.g. another browser
+  // window) cannot hide the one that is playing an anime.
+  std::vector<media_t> media;
+  std::vector<std::optional<ResolvedMedia>> resolved;
+  std::vector<Candidate> candidates;
+  for (const auto& result : results) {
+    auto& item = media.emplace_back(flattenMedia(result));
+    const auto fields = extractMediaFields(item);
+    auto& entry = resolved.emplace_back();
+    if (result.player.type == anisthesia::PlayerType::WebBrowser) {
+      entry = resolveBrowserPage(result, fields);
+      // Only the page title is kept.
+      std::erase_if(item.information, [](const anisthesia::MediaInfo& information) {
+        return information.type == anisthesia::MediaInfoType::Url;
+      });
+    } else {
+      entry = resolveMedia(fields);
+      if (entry) entry->episode.setAnimeId(track::recognition::identify(entry->episode));
+    }
+    candidates.push_back({
+        .handle = result.window.handle,
+        .hasEpisode = entry.has_value(),
+        .identified = entry && entry->episode.animeId() != anime::kUnknownId,
+    });
+  }
+
+  const auto index = chooseCandidate(candidates, currentWindowHandle_);
+  if (!index) {
     reset();
     return;
   }
 
-  currentFile_ = std::move(resolved->file);
-  auto& episode = resolved->episode;
-
-  const auto animeId = track::recognition::identify(episode);
-  episode.setAnimeId(animeId);
+  currentPlayer_ = results[*index].player;
+  currentMedia_ = std::move(media[*index]);
+  currentWindowHandle_ = results[*index].window.handle;
+  currentFile_ = std::move(resolved[*index]->file);
+  const auto& episode = resolved[*index]->episode;
 
   if (hasEpisodeChanged(episode)) {
     currentEpisode_ = episode;
     emit currentEpisodeChanged(episode);
   }
 #endif
+}
+
+std::optional<std::size_t> chooseCandidate(std::span<const Candidate> candidates,
+                                           const void* currentHandle) {
+  const auto find = [&candidates](auto predicate) -> std::optional<std::size_t> {
+    const auto it = std::ranges::find_if(candidates, predicate);
+    if (it == candidates.end()) return std::nullopt;
+    return static_cast<std::size_t>(it - candidates.begin());
+  };
+  const auto isCurrent = [currentHandle](const Candidate& candidate) {
+    return currentHandle && candidate.handle == currentHandle;
+  };
+
+  if (const auto index = find([&](const Candidate& c) { return isCurrent(c) && c.identified; })) {
+    return index;
+  }
+  if (const auto index = find(&Candidate::identified)) return index;
+  if (const auto index = find([&](const Candidate& c) { return isCurrent(c) && c.hasEpisode; })) {
+    return index;
+  }
+  return find(&Candidate::hasEpisode);
 }
 
 bool Detection::isMediaIdentified() const {
