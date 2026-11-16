@@ -19,6 +19,7 @@
 #include "navigation_widget.hpp"
 
 #include <QMouseEvent>
+#include <QSignalBlocker>
 
 #include "gui/main/main_window.hpp"
 #include "gui/main/navigation_item_delegate.hpp"
@@ -74,6 +75,12 @@ NavigationWidget::NavigationWidget(QWidget* parent) : QTreeWidget(parent) {
 }
 
 void NavigationWidget::refresh() {
+  constexpr auto pageIndexRole = static_cast<int>(NavigationItemDataRole::PageIndex);
+  constexpr auto statusRole = static_cast<int>(NavigationItemDataRole::ListStatus);
+  const auto* current = currentItem();
+  const auto currentPage = current ? current->data(0, pageIndexRole) : QVariant{};
+  const auto currentStatus = current ? current->data(0, statusRole) : QVariant{};
+
   setUpdatesEnabled(false);
   clear();
 
@@ -107,6 +114,14 @@ void NavigationWidget::refresh() {
   addSeparator();
   addItem("Library", "folder", MainWindowPage::Library);
   addItem("Torrents", "rss_feed", MainWindowPage::Torrents)->setDisabled(true);  // placeholder
+
+  // Select the same item again. Its page is already shown, so there is nothing to navigate to.
+  if (currentPage.isValid()) {
+    const QSignalBlocker blocker{this};
+    setCurrentItem(currentStatus.isValid()
+                       ? findListStatusItem(currentStatus.value<anime::list::Status>())
+                       : findItemByPage(currentPage.value<MainWindowPage>()));
+  }
 
   setUpdatesEnabled(true);
 }
